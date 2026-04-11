@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(CUSTOMER)
+  addresses Address[]
+  createdAt DateTime @default(now())
+  cart      Cart?
+  orders Order[]
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+  DELIVERY_AGENT
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  products Product[]
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Float
+  stock       Int      @default(0)
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  categoryId String
+  category   Category   @relation(fields: [categoryId], references: [id])
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id])
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+}
+
+model CartItem {
+  id        String @id @default(uuid())
+  cartId    String
+  productId String
+  quantity  Int    @default(1)
+
+  cart    Cart    @relation(fields: [cartId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, productId])
+}
+
+model Order {
+  id         String        @id @default(uuid())
+  userId     String
+  user       User          @relation(fields: [userId], references: [id])
+
+  addressId String?
+  address    Address? @relation(fields: [addressId], references: [id])
+
+  status     OrderStatus   @default(PENDING)
+  total      Float
+  createdAt  DateTime      @default(now())
+  items      OrderItem[]
+}
+
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  productId  String
+  quantity   Int
+  price      Float
+
+  order      Order    @relation(fields: [orderId], references: [id])
+  product    Product  @relation(fields: [productId], references: [id])
+}
+
+enum OrderStatus {
+  PENDING            // Order placed, awaiting processing
+  CONFIRMED          // Admin confirmed the order
+  PACKED             // Order packed and ready
+  OUT_FOR_DELIVERY   // With delivery agent
+  DELIVERED          // Successfully delivered
+  CANCELLED          // Cancelled before delivery
+}
+
+model Address {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  name      String   // e.g. Home, Office
+  street    String
+  city      String
+  state     String
+  zipCode   String
+  phone     String
+  addressLine String?
+
+  createdAt DateTime @default(now())
+
+  orders Order[]
+}

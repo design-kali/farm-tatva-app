@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: farmtatva-db
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: farmer
+      POSTGRES_PASSWORD: fresh@tomato
+      POSTGRES_DB: farmtatva
+      PGDATA: /var/lib/postgresql/data/pgdata
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U farmer -d farmtatva"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    shm_size: 1gb
+
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+    command: >
+      postgres
+      -c max_connections=200
+      -c shared_buffers=512MB
+      -c effective_cache_size=1536MB
+      -c maintenance_work_mem=128MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+
+volumes:
+  pgdata:
