@@ -1,5 +1,5 @@
-import { motion, AnimatePresence } from 'motion/react';
-import { X, Trash2, Plus, Minus, Leaf, Truck } from 'lucide-react';
+import { motion, AnimatePresence } from "motion/react";
+import { X, Trash2, Plus, Minus, Leaf, Truck } from "lucide-react";
 
 interface CartItem {
   id: string;
@@ -45,18 +45,20 @@ export function CartOverlay({
 
           {/* Modal */}
           <motion.div
-            initial={{ y: '100%' }}
+            initial={{ y: "100%" }}
             animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[85vh] flex flex-col"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-5 border-b border-[#1B4332]/10">
               <div>
-                <h2 className="text-2xl text-[#1B4332] font-serif">Your Basket</h2>
+                <h2 className="text-2xl text-[#1B4332] font-serif">
+                  Your Basket
+                </h2>
                 <p className="text-sm text-[#1B4332]/60">
-                  {totalItems} {totalItems === 1 ? 'item' : 'items'}
+                  {totalItems} {totalItems === 1 ? "item" : "items"}
                 </p>
               </div>
               <motion.button
@@ -75,7 +77,9 @@ export function CartOverlay({
                 <div className="flex flex-col items-center justify-center h-full text-center py-12">
                   <Leaf className="w-16 h-16 text-[#1B4332]/20 mb-4" />
                   <p className="text-[#1B4332]/60">Your basket is empty</p>
-                  <p className="text-sm text-[#1B4332]/40 mt-2">Add some fresh produce to get started</p>
+                  <p className="text-sm text-[#1B4332]/40 mt-2">
+                    Add some fresh produce to get started
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -99,11 +103,18 @@ export function CartOverlay({
 
                       {/* Product Info */}
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-[#1B4332] mb-1 truncate">{item.name}</h4>
-                        <p className="text-xs text-[#1B4332]/60 mb-2">by {item.farmer}</p>
+                        <h4 className="text-[#1B4332] mb-1 truncate">
+                          {item.name}
+                        </h4>
+                        <p className="text-xs text-[#1B4332]/60 mb-2">
+                          by {item.farmer}
+                        </p>
                         <div className="flex items-center justify-between">
                           <span className="text-[#1B4332]">
-                            ₹{item.price} <span className="text-sm text-[#1B4332]/60">/{item.unit}</span>
+                            ₹{item.price}{" "}
+                            <span className="text-sm text-[#1B4332]/60">
+                              /{item.unit}
+                            </span>
                           </span>
 
                           {/* Quantity Controls */}
@@ -116,7 +127,9 @@ export function CartOverlay({
                             >
                               <Minus className="w-3 h-3" />
                             </motion.button>
-                            <span className="w-6 text-center text-sm">{item.quantity}</span>
+                            <span className="w-6 text-center text-sm">
+                              {item.quantity}
+                            </span>
                             <motion.button
                               whileHover={{ scale: 1.2 }}
                               whileTap={{ scale: 0.9 }}
@@ -150,14 +163,16 @@ export function CartOverlay({
                 {/* Farm-to-Home Promise */}
                 <div className="flex items-center gap-2 mb-4 text-[#1B4332]/70 text-sm">
                   <Truck className="w-4 h-4 text-[#1B4332]" />
-                  <span>Farm-to-Home Delivery: Fresh within 2-3 hours</span>
+                  <span>Farm-Fresh Delivery by Morning</span>
                 </div>
 
                 {/* Total & Checkout */}
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="text-sm text-[#1B4332]/60">Total Amount</p>
-                    <p className="text-2xl font-serif text-[#1B4332]">₹{totalPrice}</p>
+                    <p className="text-2xl font-serif text-[#1B4332]">
+                      ₹{totalPrice}
+                    </p>
                   </div>
                 </div>
 

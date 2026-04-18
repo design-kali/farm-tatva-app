@@ -1,12 +1,23 @@
-import { Search, ShoppingBag, MapPin, Clock, Leaf, Sprout, Ban, CalendarRange } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { useState, useRef } from 'react';
-import { ProductCard } from './components/ProductCard';
-import { FarmerCard } from './components/FarmerCard';
-import { CategoryCard } from './components/CategoryCard';
-import { FloatingCartBar } from './components/FloatingCartBar';
-import { CartOverlay } from './components/CartOverlay';
-import { FeatureCard } from './components/FeatureCard';
+import {
+  Search,
+  ShoppingBag,
+  MapPin,
+  Clock,
+  Leaf,
+  Sprout,
+  Ban,
+  CalendarRange,
+  User,
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { useState, useRef } from "react";
+import { ProductCard } from "./components/ProductCard";
+import { FarmerCard } from "./components/FarmerCard";
+import { CategoryCard } from "./components/CategoryCard";
+import { FloatingCartBar } from "./components/FloatingCartBar";
+import { CartOverlay } from "./components/CartOverlay";
+import { FeatureCard } from "./components/FeatureCard";
+import { LoginDialog } from "./components/LoginDialog";
 
 interface CartItem {
   id: string;
@@ -21,7 +32,15 @@ interface CartItem {
 export default function App() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCartOverlay, setShowCartOverlay] = useState(false);
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const cartIconRef = useRef<HTMLDivElement>(null);
+
+  const handleCategoryClick = (categoryName: string) => {
+    setSelectedCategory(
+      selectedCategory === categoryName ? null : categoryName,
+    );
+  };
 
   const addToCart = (product: any) => {
     setCart((prevCart) => {
@@ -30,7 +49,7 @@ export default function App() {
         return prevCart.map((item) =>
           item.id === product.name
             ? { ...item, quantity: item.quantity + 1 }
-            : item
+            : item,
         );
       }
       return [
@@ -53,7 +72,7 @@ export default function App() {
       const updatedCart = prevCart.map((item) =>
         item.id === productId
           ? { ...item, quantity: Math.max(0, item.quantity + change) }
-          : item
+          : item,
       );
       return updatedCart.filter((item) => item.quantity > 0);
     });
@@ -69,117 +88,152 @@ export default function App() {
   };
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const totalPrice = cart.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0,
+  );
   const categories = [
-    { name: 'Fresh Vegetables', image: 'https://images.unsplash.com/photo-1741515044901-58696421d24a?w=400&q=80', count: '150+ items' },
-    { name: 'Organic Fruits', image: 'https://images.unsplash.com/flagged/photo-1570197275784-ad9f674f9231?w=400&q=80', count: '120+ items' },
-    { name: 'Leafy Greens', image: 'https://images.unsplash.com/photo-1768776847082-9ddb43ec49ea?w=400&q=80', count: '80+ items' },
-    { name: 'Root Vegetables', image: 'https://images.unsplash.com/photo-1741515043161-e97d05e5cfcc?w=400&q=80', count: '60+ items' },
+    {
+      name: "Fresh Vegetables",
+      image:
+        "https://images.unsplash.com/photo-1741515044901-58696421d24a?w=400&q=80",
+      count: "150+ items",
+    },
+    {
+      name: "Organic Fruits",
+      image:
+        "https://images.unsplash.com/flagged/photo-1570197275784-ad9f674f9231?w=400&q=80",
+      count: "120+ items",
+    },
+    {
+      name: "Leafy Greens",
+      image:
+        "https://images.unsplash.com/photo-1768776847082-9ddb43ec49ea?w=400&q=80",
+      count: "80+ items",
+    },
+    {
+      name: "Root Vegetables",
+      image:
+        "https://images.unsplash.com/photo-1741515043161-e97d05e5cfcc?w=400&q=80",
+      count: "60+ items",
+    },
   ];
 
   const farmers = [
     {
-      name: 'Rajesh Kumar',
-      location: 'Nashik, Maharashtra',
-      specialty: 'Organic Tomatoes & Leafy Greens',
-      image: 'https://images.unsplash.com/photo-1627829382469-f4bce7df99ba?w=400&q=80',
-      experience: '15 years'
+      name: "Rajesh Kumar",
+      location: "Nashik, Maharashtra",
+      specialty: "Organic Tomatoes & Leafy Greens",
+      image:
+        "https://images.unsplash.com/photo-1627829382469-f4bce7df99ba?w=400&q=80",
+      experience: "15 years",
     },
     {
-      name: 'Priya Sharma',
-      location: 'Pune, Maharashtra',
-      specialty: 'Seasonal Fruits & Berries',
-      image: 'https://images.unsplash.com/photo-1657658852797-cb909647a6c8?w=400&q=80',
-      experience: '12 years'
+      name: "Priya Sharma",
+      location: "Pune, Maharashtra",
+      specialty: "Seasonal Fruits & Berries",
+      image:
+        "https://images.unsplash.com/photo-1657658852797-cb909647a6c8?w=400&q=80",
+      experience: "12 years",
     },
     {
-      name: 'Arjun Patel',
-      location: 'Ahmedabad, Gujarat',
-      specialty: 'Root Vegetables & Herbs',
-      image: 'https://images.unsplash.com/photo-1632923057240-b6775e4db748?w=400&q=80',
-      experience: '20 years'
+      name: "Arjun Patel",
+      location: "Ahmedabad, Gujarat",
+      specialty: "Root Vegetables & Herbs",
+      image:
+        "https://images.unsplash.com/photo-1632923057240-b6775e4db748?w=400&q=80",
+      experience: "20 years",
     },
     {
-      name: 'Meera Devi',
-      location: 'Bangalore, Karnataka',
-      specialty: 'Exotic Vegetables',
-      image: 'https://images.unsplash.com/photo-1760445412155-41a14ebaf20a?w=400&q=80',
-      experience: '10 years'
+      name: "Meera Devi",
+      location: "Bangalore, Karnataka",
+      specialty: "Exotic Vegetables",
+      image:
+        "https://images.unsplash.com/photo-1760445412155-41a14ebaf20a?w=400&q=80",
+      experience: "10 years",
     },
   ];
 
   const featuredProducts = [
     {
-      name: 'Organic Tomatoes',
+      name: "Organic Tomatoes",
       price: 45,
-      unit: 'kg',
-      image: 'https://images.unsplash.com/flagged/photo-1570197275784-ad9f674f9231?w=600&q=80',
+      unit: "kg",
+      image:
+        "https://images.unsplash.com/flagged/photo-1570197275784-ad9f674f9231?w=600&q=80",
       tatvaScore: 5,
-      farmer: 'Rajesh Kumar',
-      deliveryTime: '2 hours'
+      farmer: "Rajesh Kumar",
+      deliveryTime: "2 hours",
     },
     {
-      name: 'Fresh Carrots',
+      name: "Fresh Carrots",
       price: 35,
-      unit: 'kg',
-      image: 'https://images.unsplash.com/photo-1741515044901-58696421d24a?w=600&q=80',
+      unit: "kg",
+      image:
+        "https://images.unsplash.com/photo-1741515044901-58696421d24a?w=600&q=80",
       tatvaScore: 5,
-      farmer: 'Arjun Patel',
-      deliveryTime: '2 hours'
+      farmer: "Arjun Patel",
+      deliveryTime: "2 hours",
     },
     {
-      name: 'Mixed Vegetables Basket',
+      name: "Mixed Vegetables Basket",
       price: 280,
-      unit: 'basket',
-      image: 'https://images.unsplash.com/photo-1657288089316-c0350003ca49?w=600&q=80',
+      unit: "basket",
+      image:
+        "https://images.unsplash.com/photo-1657288089316-c0350003ca49?w=600&q=80",
       tatvaScore: 5,
-      farmer: 'Priya Sharma',
-      deliveryTime: '3 hours'
+      farmer: "Priya Sharma",
+      deliveryTime: "3 hours",
     },
     {
-      name: 'Organic Cabbage',
+      name: "Organic Cabbage",
       price: 30,
-      unit: 'kg',
-      image: 'https://images.unsplash.com/photo-1768776847082-9ddb43ec49ea?w=600&q=80',
+      unit: "kg",
+      image:
+        "https://images.unsplash.com/photo-1768776847082-9ddb43ec49ea?w=600&q=80",
       tatvaScore: 4,
-      farmer: 'Meera Devi',
-      deliveryTime: '2 hours'
+      farmer: "Meera Devi",
+      deliveryTime: "2 hours",
     },
     {
-      name: 'Fresh Blueberries',
+      name: "Fresh Blueberries",
       price: 320,
-      unit: 'kg',
-      image: 'https://images.unsplash.com/photo-1722553547284-4315a34b3b82?w=600&q=80',
+      unit: "kg",
+      image:
+        "https://images.unsplash.com/photo-1722553547284-4315a34b3b82?w=600&q=80",
       tatvaScore: 5,
-      farmer: 'Priya Sharma',
-      deliveryTime: '2 hours'
+      farmer: "Priya Sharma",
+      deliveryTime: "2 hours",
     },
     {
-      name: 'Root Vegetables Mix',
+      name: "Root Vegetables Mix",
       price: 40,
-      unit: 'kg',
-      image: 'https://images.unsplash.com/photo-1741515043161-e97d05e5cfcc?w=600&q=80',
+      unit: "kg",
+      image:
+        "https://images.unsplash.com/photo-1741515043161-e97d05e5cfcc?w=600&q=80",
       tatvaScore: 4,
-      farmer: 'Rajesh Kumar',
-      deliveryTime: '3 hours'
+      farmer: "Rajesh Kumar",
+      deliveryTime: "3 hours",
     },
     {
-      name: 'Seasonal Fruits & Veggies',
+      name: "Seasonal Fruits & Veggies",
       price: 450,
-      unit: 'basket',
-      image: 'https://images.unsplash.com/photo-1683511997653-6be0fc990ec9?w=600&q=80',
+      unit: "basket",
+      image:
+        "https://images.unsplash.com/photo-1683511997653-6be0fc990ec9?w=600&q=80",
       tatvaScore: 5,
-      farmer: 'Arjun Patel',
-      deliveryTime: '2 hours'
+      farmer: "Arjun Patel",
+      deliveryTime: "2 hours",
     },
     {
-      name: 'Fresh Market Produce',
+      name: "Fresh Market Produce",
       price: 95,
-      unit: 'kg',
-      image: 'https://images.unsplash.com/photo-1751200270667-cb13feeac24c?w=600&q=80',
+      unit: "kg",
+      image:
+        "https://images.unsplash.com/photo-1751200270667-cb13feeac24c?w=600&q=80",
       tatvaScore: 4,
-      farmer: 'Meera Devi',
-      deliveryTime: '3 hours'
+      farmer: "Meera Devi",
+      deliveryTime: "3 hours",
     },
   ];
 
@@ -196,43 +250,60 @@ export default function App() {
               className="flex items-center gap-2"
             >
               <Leaf className="w-8 h-8 text-[#1B4332]" />
-              <h1 className="text-2xl md:text-3xl font-serif text-[#1B4332]">FarmTatva</h1>
+              <h1 className="text-2xl md:text-3xl font-serif text-[#1B4332]">
+                FarmTatva
+              </h1>
             </motion.div>
 
             {/* Location & Delivery Info */}
             <div className="hidden md:flex items-center gap-6 text-sm">
               <div className="flex items-center gap-2 text-[#1B4332]">
                 <MapPin className="w-4 h-4" />
-                <span>Deliver to: <strong>Mumbai 400001</strong></span>
+                <span>
+                  Deliver to: <strong>Mumbai 400001</strong>
+                </span>
               </div>
               <div className="flex items-center gap-2 text-[#1B4332]">
                 <Clock className="w-4 h-4" />
-                <span>Within 2 hours</span>
+                <span>Delivered Fresh Every Morning</span>
               </div>
             </div>
 
-            {/* Cart */}
-            <motion.div ref={cartIconRef}>
+            {/* User & Cart */}
+            <div className="flex items-center gap-3">
+              {/* User Avatar */}
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => totalItems > 0 && setShowCartOverlay(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-[#1B4332] text-white rounded-full"
+                onClick={() => setShowLoginDialog(true)}
+                className="w-10 h-10 bg-[#F8F4E1] text-[#1B4332] rounded-full flex items-center justify-center border-2 border-[#1B4332]/10 hover:border-[#1B4332]/30 transition-colors"
               >
-                <ShoppingBag className="w-5 h-5" />
-                <span className="hidden sm:inline">Cart</span>
-                <AnimatePresence mode="wait">
-                  <motion.span
-                    key={totalItems}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="bg-white text-[#1B4332] rounded-full w-5 h-5 flex items-center justify-center text-xs"
-                  >
-                    {totalItems}
-                  </motion.span>
-                </AnimatePresence>
+                <User className="w-5 h-5" />
               </motion.button>
-            </motion.div>
+
+              {/* Cart */}
+              <motion.div ref={cartIconRef}>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowCartOverlay(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-[#1B4332] text-white rounded-full"
+                >
+                  <ShoppingBag className="w-5 h-5" />
+                  <span className="hidden sm:inline">Cart</span>
+                  <AnimatePresence mode="wait">
+                    <motion.span
+                      key={totalItems}
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="bg-white text-[#1B4332] rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                    >
+                      {totalItems}
+                    </motion.span>
+                  </AnimatePresence>
+                </motion.button>
+              </motion.div>
+            </div>
           </div>
 
           {/* Search Bar */}
@@ -286,7 +357,9 @@ export default function App() {
                 transition={{ delay: 0.5 }}
                 className="text-base md:text-lg lg:text-xl text-white/90 mb-6 md:mb-8 leading-relaxed"
               >
-                We skip the local shops and middle-stalls to bring you main-market freshness and wholesale prices directly to your kitchen.
+                We skip the local shops and middle-stalls to bring you
+                main-market freshness and wholesale prices directly to your
+                kitchen.
               </motion.p>
               <motion.button
                 initial={{ opacity: 0, y: 20 }}
@@ -311,13 +384,13 @@ export default function App() {
                   <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm">
                     <Leaf className="w-5 h-5 text-white" />
                   </div>
-                  <span>100% Organic</span>
+                  <span>Fresh from Trusted Farmers</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm">
                     <Clock className="w-5 h-5 text-white" />
                   </div>
-                  <span>2-Hour Delivery</span>
+                  <span>Delivered Fresh Every Morning</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm">
@@ -333,7 +406,7 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.4 }}
-              className="relative"
+              className="relative z-10"
             >
               <div className="relative rounded-3xl overflow-hidden shadow-2xl">
                 <img
@@ -343,7 +416,9 @@ export default function App() {
                 />
                 {/* Overlay Badge */}
                 <div className="absolute bottom-6 left-6 bg-white/95 backdrop-blur-sm rounded-2xl px-6 py-4 shadow-xl">
-                  <p className="text-sm text-[#1B4332]/60 mb-1">Starting from</p>
+                  <p className="text-sm text-[#1B4332]/60 mb-1">
+                    Starting from
+                  </p>
                   <p className="text-2xl font-serif text-[#1B4332]">₹35/kg</p>
                 </div>
               </div>
@@ -376,12 +451,155 @@ export default function App() {
         </div>
 
         {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }}></div>
+
+        <div
+          className="absolute inset-0"
+          style={{
+            // This places a small orange glow in the top-right corner, fading into green
+            background:
+              "radial-gradient(circle at top right, #FF9800 0%, #1f6b22 30%, #022404 100%)",
+          }}
+        >
+          <div
+            className="absolute inset-0 opacity-5"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            }}
+          ></div>
         </div>
       </motion.section>
+
+      {/* Categories */}
+      <section className="py-8 md:py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.h3
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-2xl md:text-3xl text-[#1B4332] mb-6"
+        >
+          Shop by Category
+        </motion.h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+          {categories.map((category, index) => (
+            <CategoryCard
+              key={category.name}
+              category={category}
+              index={index}
+              onClick={() => handleCategoryClick(category.name)}
+              isSelected={selectedCategory === category.name}
+            />
+          ))}
+        </div>
+
+        {/* Category Products */}
+        <AnimatePresence mode="wait">
+          {selectedCategory && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+              className="mt-8 overflow-hidden"
+            >
+              <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-[#1B4332]/10">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h4 className="text-2xl text-[#1B4332] font-serif mb-2">
+                      {selectedCategory}
+                    </h4>
+                    <p className="text-[#1B4332]/70">
+                      {featuredProducts.length} fresh items available
+                    </p>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setSelectedCategory(null)}
+                    className="px-4 py-2 bg-[#F8F4E1] text-[#1B4332] rounded-full text-sm hover:bg-[#1B4332] hover:text-white transition-colors"
+                  >
+                    Clear Selection
+                  </motion.button>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                  {featuredProducts.map((product, index) => (
+                    <ProductCard
+                      key={`${product.name}-${index}`}
+                      product={product}
+                      index={index}
+                      onAddToCart={addToCart}
+                      onUpdateQuantity={updateQuantity}
+                      quantity={getItemQuantity(product.name)}
+                      cartIconRef={cartIconRef}
+                    />
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </section>
+
+      {/* Know Your Farmer */}
+
+      {/*  
+
+      <section className="py-8 md:py-12 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-6"
+          >
+            <h3 className="text-2xl md:text-3xl text-[#1B4332] mb-2">Know Your Farmer</h3>
+            <p className="text-[#1B4332]/70">
+              Meet the dedicated farmers who grow your food with love and care
+            </p>
+          </motion.div>
+
+          <div className="overflow-x-auto -mx-4 px-4 hide-scrollbar">
+            <div className="flex gap-6 pb-4">
+              {farmers.map((farmer, index) => (
+                <FarmerCard key={farmer.name} farmer={farmer} index={index} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      */}
+
+      {/* Featured Products */}
+      <section className="py-8 md:py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mb-6"
+        >
+          <h3 className="text-2xl md:text-3xl text-[#1B4332] mb-2">
+            Fresh Picks Today
+          </h3>
+          <p className="text-[#1B4332]/70">
+            Handpicked produce, harvested this morning
+          </p>
+        </motion.div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+          {featuredProducts.map((product, index) => (
+            <ProductCard
+              key={`${product.name}-${index}`}
+              product={product}
+              index={index}
+              onAddToCart={addToCart}
+              onUpdateQuantity={updateQuantity}
+              quantity={getItemQuantity(product.name)}
+              cartIconRef={cartIconRef}
+            />
+          ))}
+        </div>
+      </section>
 
       {/* Features Section */}
       <section className="py-12 md:py-16 bg-[#F8F4E1]">
@@ -423,77 +641,6 @@ export default function App() {
         </div>
       </section>
 
-      {/* Categories */}
-      <section className="py-8 md:py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.h3
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-2xl md:text-3xl text-[#1B4332] mb-6"
-        >
-          Shop by Category
-        </motion.h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-          {categories.map((category, index) => (
-            <CategoryCard key={category.name} category={category} index={index} />
-          ))}
-        </div>
-      </section>
-
-      {/* Know Your Farmer */}
-      <section className="py-8 md:py-12 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mb-6"
-          >
-            <h3 className="text-2xl md:text-3xl text-[#1B4332] mb-2">Know Your Farmer</h3>
-            <p className="text-[#1B4332]/70">
-              Meet the dedicated farmers who grow your food with love and care
-            </p>
-          </motion.div>
-
-          <div className="overflow-x-auto -mx-4 px-4 hide-scrollbar">
-            <div className="flex gap-6 pb-4">
-              {farmers.map((farmer, index) => (
-                <FarmerCard key={farmer.name} farmer={farmer} index={index} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Products */}
-      <section className="py-8 md:py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mb-6"
-        >
-          <h3 className="text-2xl md:text-3xl text-[#1B4332] mb-2">Fresh Picks Today</h3>
-          <p className="text-[#1B4332]/70">
-            Handpicked produce, harvested this morning
-          </p>
-        </motion.div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-          {featuredProducts.map((product, index) => (
-            <ProductCard
-              key={`${product.name}-${index}`}
-              product={product}
-              index={index}
-              onAddToCart={addToCart}
-              onUpdateQuantity={updateQuantity}
-              quantity={getItemQuantity(product.name)}
-              cartIconRef={cartIconRef}
-            />
-          ))}
-        </div>
-      </section>
-
       {/* Footer */}
       <footer className="bg-[#1B4332] text-white py-12 mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -504,7 +651,8 @@ export default function App() {
                 <h4 className="text-xl font-serif">FarmTatva</h4>
               </div>
               <p className="text-white/80 text-sm">
-                Bringing the essence of farm-fresh produce directly to your doorstep
+                Bringing the essence of farm-fresh produce directly to your
+                doorstep
               </p>
             </div>
             <div>
@@ -519,7 +667,8 @@ export default function App() {
             <div>
               <h5 className="mb-4">Contact</h5>
               <p className="text-sm text-white/80">
-                Email: hello@farmtatva.com<br />
+                Email: hello@farmtatva.com
+                <br />
                 Phone: +91 98765 43210
               </p>
             </div>
@@ -546,6 +695,12 @@ export default function App() {
         onUpdateQuantity={updateQuantity}
         onRemoveItem={removeFromCart}
         totalPrice={totalPrice}
+      />
+
+      {/* Login Dialog */}
+      <LoginDialog
+        isOpen={showLoginDialog}
+        onClose={() => setShowLoginDialog(false)}
       />
 
       <style>{`
