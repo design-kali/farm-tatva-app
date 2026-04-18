@@ -14,7 +14,11 @@ export const addAddress = async (req, res) => {
 };
 
 export const listAddresses = async (req, res) => {
-  const addresses = await getUserAddresses(req.user.id);
+  const deliveryAreaId =
+    typeof req.query.deliveryAreaId === "string"
+      ? req.query.deliveryAreaId
+      : undefined;
+  const addresses = await getUserAddresses(req.user.id, deliveryAreaId);
   res.json(addresses);
 };
 

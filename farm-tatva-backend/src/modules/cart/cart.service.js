@@ -1,15 +1,28 @@
 import prisma from "../../config/db.js";
 
+const cartInclude = {
+  items: {
+    include: {
+      product: {
+        include: {
+          category: true,
+        },
+      },
+    },
+  },
+};
+
 // Get or create cart
 const getOrCreateCart = async (userId) => {
   let cart = await prisma.cart.findUnique({
     where: { userId },
-    include: { items: { include: { product: true } } },
+    include: cartInclude,
   });
 
   if (!cart) {
     cart = await prisma.cart.create({
       data: { userId },
+      include: cartInclude,
     });
   }
 
@@ -47,14 +60,7 @@ export const addToCart = async (userId, productId, quantity) => {
 
 // Get cart
 export const getCart = async (userId) => {
-  return prisma.cart.findUnique({
-    where: { userId },
-    include: {
-      items: {
-        include: { product: true },
-      },
-    },
-  });
+  return getOrCreateCart(userId);
 };
 
 // Update item quantity

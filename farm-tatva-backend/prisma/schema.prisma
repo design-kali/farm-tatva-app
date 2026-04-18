@@ -33,12 +33,27 @@ model Category {
   products Product[]
 }
 
+model DeliveryArea {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  street      String
+  city        String
+  state       String
+  zipCode     String
+  description String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  addresses Address[]
+}
+
 model Product {
   id          String   @id @default(uuid())
-  name        String
+  name        String   @unique
   description String?
   price       Float
   stock       Int      @default(0)
+  maxStock    Int      @default(0)
   imageUrl    String?
   createdAt   DateTime @default(now())
   categoryId String
@@ -102,19 +117,23 @@ enum OrderStatus {
 }
 
 model Address {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  id             String        @id @default(uuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  deliveryAreaId String?
+  deliveryArea   DeliveryArea? @relation(fields: [deliveryAreaId], references: [id])
 
-  name      String   // e.g. Home, Office
-  street    String
-  city      String
-  state     String
-  zipCode   String
-  phone     String
-  addressLine String?
+  name        String @default("Home") // e.g. Home, Office
+  street      String
+  city        String
+  state       String
+  zipCode     String
+  phone       String?
+  addressLine String
 
   createdAt DateTime @default(now())
 
   orders Order[]
+
+  @@index([userId, deliveryAreaId])
 }

@@ -1,4 +1,8 @@
-import { registerUser, loginUser } from "./auth.service.js";
+import {
+  registerUser,
+  loginUser,
+  getUserProfileById,
+} from "./auth.service.js";
 import { generateToken } from "../../utils/jwt.js";
 
 export const register = async (req, res) => {
@@ -24,5 +28,11 @@ export const login = async (req, res) => {
 };
 
 export const getProfile = async (req, res) => {
-  res.json(req.user);
+  const user = await getUserProfileById(req.user.id);
+
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  res.json(user);
 };

@@ -1,6 +1,15 @@
 import prisma from "../../config/db.js";
 import bcrypt from "bcrypt";
 
+const sanitizeUser = (user) => {
+  if (!user) {
+    return null;
+  }
+
+  const { password, ...safeUser } = user;
+  return safeUser;
+};
+
 export const registerUser = async (data) => {
   const existingUser = await prisma.user.findUnique({
     where: { email: data.email },
@@ -12,13 +21,15 @@ export const registerUser = async (data) => {
 
   const hashedPassword = await bcrypt.hash(data.password, 10);
 
-  return prisma.user.create({
+  const user = await prisma.user.create({
     data: {
       name: data.name,
       email: data.email,
       password: hashedPassword,
     },
   });
+
+  return sanitizeUser(user);
 };
 
 export const loginUser = async (email, password) => {
@@ -36,5 +47,13 @@ export const loginUser = async (email, password) => {
     throw new Error("Invalid credentials");
   }
 
-  return user;
+  return sanitizeUser(user);
+};
+
+export const getUserProfileById = async (id) => {
+  const user = await prisma.user.findUnique({
+    where: { id },
+  });
+
+  return sanitizeUser(user);
 };
