@@ -66,3 +66,27 @@ export const getProductById = async (id) => {
     include: { category: true },
   });
 };
+
+export const updateProduct = async (id, data) => {
+  const updateData = { ...data };
+  if (data.stock !== undefined) {
+    updateData.stock = toNonNegativeInt(data.stock);
+  }
+  if (data.maxStock !== undefined) {
+    updateData.maxStock = toNonNegativeInt(data.maxStock);
+  }
+  if (updateData.maxStock && updateData.stock) {
+    updateData.maxStock = Math.max(updateData.maxStock, updateData.stock);
+  }
+  return prisma.product.update({
+    where: { id },
+    data: updateData,
+    include: { category: true },
+  });
+};
+
+export const deleteProduct = async (id) => {
+  return prisma.product.delete({
+    where: { id },
+  });
+};

@@ -7,3 +7,16 @@ export const createCategory = async (data) => {
 export const getCategories = async () => {
   return prisma.category.findMany();
 };
+
+export const updateCategory = async (id, data) => {
+  return prisma.category.update({
+    where: { id },
+    data,
+  });
+};
+
+export const deleteCategory = async (id) => {
+  return prisma.category.delete({
+    where: { id },
+  });
+};

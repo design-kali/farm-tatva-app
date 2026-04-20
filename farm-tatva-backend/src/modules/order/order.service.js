@@ -1,18 +1,31 @@
 import prisma from "../../config/db.js";
 
-// Get user orders
-export const getUserOrders = async (userId) => {
+export const getOrders = async (userId, isAdmin = false) => {
   return prisma.order.findMany({
-    where: { userId },
+    where: isAdmin ? undefined : { userId },
     orderBy: {
       createdAt: "desc",
     },
     include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          createdAt: true,
+        },
+      },
+      address: true,
       items: {
         include: { product: true },
       },
     },
   });
+};
+
+export const getUserOrders = async (userId) => {
+  return getOrders(userId, false);
 };
 
 export const placeOrder = async (userId, addressId) => {

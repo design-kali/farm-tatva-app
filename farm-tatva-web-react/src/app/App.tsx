@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { ProductCard } from "./components/ProductCard";
 import { CategoryCard } from "./components/CategoryCard";
 import { FloatingCartBar } from "./components/FloatingCartBar";
@@ -31,15 +32,15 @@ import {
   type CreateAddressPayload,
   type ProductCardModel,
 } from "./lib/api";
+import {
+  clearStoredSession,
+  persistSession,
+  readStoredSession,
+  type StoredSession,
+} from "./lib/auth";
 
-const SESSION_STORAGE_KEY = "farm-tatva-session";
 const GUEST_CART_STORAGE_KEY = "farm-tatva-guest-cart";
 const DELIVERY_AREA_STORAGE_KEY = "farm-tatva-delivery-area";
-
-interface StoredSession {
-  token: string;
-  user: ApiUser;
-}
 
 const getUserDisplayName = (user: ApiUser | null | undefined) => {
   const rawName = typeof user?.name === "string" ? user.name.trim() : "";
@@ -63,46 +64,6 @@ const getUserFirstName = (user: ApiUser | null | undefined) => {
 
 const getUserInitial = (user: ApiUser | null | undefined) => {
   return getUserDisplayName(user).charAt(0).toUpperCase();
-};
-
-const readStoredSession = (): StoredSession | null => {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  try {
-    const rawValue = window.localStorage.getItem(SESSION_STORAGE_KEY);
-
-    if (!rawValue) {
-      return null;
-    }
-
-    const parsedValue = JSON.parse(rawValue);
-
-    if (!parsedValue?.token || !parsedValue?.user) {
-      return null;
-    }
-
-    return parsedValue;
-  } catch {
-    return null;
-  }
-};
-
-const persistSession = (session: StoredSession) => {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-};
-
-const clearStoredSession = () => {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.removeItem(SESSION_STORAGE_KEY);
 };
 
 const readStoredGuestCart = (): CartItem[] => {
@@ -907,6 +868,15 @@ export default function App() {
                     : "Sign in to save your cart"}
                 </span>
               </div>
+
+              {currentUser?.role === "ADMIN" && (
+                <Link
+                  to="/admin/dashboard"
+                  className="px-3 py-1 bg-orange-500 text-white text-sm rounded-md hover:bg-orange-600 transition-colors"
+                >
+                  Admin
+                </Link>
+              )}
 
               <motion.button
                 whileHover={{ scale: 1.05 }}

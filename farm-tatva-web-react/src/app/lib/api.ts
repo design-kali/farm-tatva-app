@@ -100,12 +100,22 @@ export interface CreateAddressPayload {
   phone?: string;
 }
 
+export interface ApiOrderItem {
+  id: string;
+  quantity: number;
+  price: number;
+  product: ApiProduct;
+}
+
 export interface ApiOrder {
   id: string;
   userId: string;
+  user?: ApiUser;
   addressId?: string | null;
+  address?: ApiAddress | null;
   status: string;
   total: number;
+  items?: ApiOrderItem[];
   createdAt: string;
 }
 
@@ -234,6 +244,8 @@ export const farmTatvaApi = {
   getProducts: () => request<ApiProduct[]>("/products"),
   getCategories: () => request<ApiCategory[]>("/categories"),
   getDeliveryAreas: () => request<ApiDeliveryArea[]>("/delivery-areas"),
+  getUsers: (token: string) => request<ApiUser[]>("/users", {}, token),
+  getOrders: (token: string) => request<ApiOrder[]>("/orders", {}, token),
   register: (payload: { name: string; email: string; password: string }) =>
     request<AuthResponse>("/auth/register", {
       method: "POST",
@@ -291,6 +303,107 @@ export const farmTatvaApi = {
       {
         method: "POST",
         body: JSON.stringify({ addressId }),
+      },
+      token,
+    ),
+  // Admin CRUD: Products
+  createProduct: (token: string, payload: Omit<ApiProduct, "id" | "createdAt">) =>
+    request<ApiProduct>(
+      "/products",
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+      token,
+    ),
+  updateProduct: (token: string, id: string, payload: Partial<ApiProduct>) =>
+    request<ApiProduct>(
+      `/products/${id}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      },
+      token,
+    ),
+  deleteProduct: (token: string, id: string) =>
+    request<{ success: boolean }>(
+      `/products/${id}`,
+      { method: "DELETE" },
+      token,
+    ),
+  // Admin CRUD: Categories
+  createCategory: (token: string, payload: Omit<ApiCategory, "id" | "createdAt">) =>
+    request<ApiCategory>(
+      "/categories",
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+      token,
+    ),
+  updateCategory: (token: string, id: string, payload: Partial<ApiCategory>) =>
+    request<ApiCategory>(
+      `/categories/${id}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      },
+      token,
+    ),
+  deleteCategory: (token: string, id: string) =>
+    request<{ success: boolean }>(
+      `/categories/${id}`,
+      { method: "DELETE" },
+      token,
+    ),
+  // Admin CRUD: Delivery Areas
+  createDeliveryArea: (token: string, payload: Omit<ApiDeliveryArea, "id" | "createdAt">) =>
+    request<ApiDeliveryArea>(
+      "/delivery-areas",
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+      token,
+    ),
+  updateDeliveryArea: (token: string, id: string, payload: Partial<ApiDeliveryArea>) =>
+    request<ApiDeliveryArea>(
+      `/delivery-areas/${id}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      },
+      token,
+    ),
+  deleteDeliveryArea: (token: string, id: string) =>
+    request<{ success: boolean }>(
+      `/delivery-areas/${id}`,
+      { method: "DELETE" },
+      token,
+    ),
+  // Admin CRUD: Users
+  updateUser: (token: string, id: string, payload: Partial<ApiUser>) =>
+    request<ApiUser>(
+      `/users/${id}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      },
+      token,
+    ),
+  deleteUser: (token: string, id: string) =>
+    request<{ success: boolean }>(
+      `/users/${id}`,
+      { method: "DELETE" },
+      token,
+    ),
+  // Admin: Update Order Status
+  updateOrderStatus: (token: string, orderId: string, status: string) =>
+    request<ApiOrder>(
+      "/orders/status",
+      {
+        method: "PUT",
+        body: JSON.stringify({ orderId, status }),
       },
       token,
     ),

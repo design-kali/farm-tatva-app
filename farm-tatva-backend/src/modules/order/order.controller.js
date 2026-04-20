@@ -1,6 +1,6 @@
 import {
   placeOrder,
-  getUserOrders,
+  getOrders,
   updateOrderStatus,
 } from "./order.service.js";
 
@@ -24,7 +24,7 @@ export const createOrder = async (req, res) => {
 };
 
 export const listOrders = async (req, res) => {
-  const orders = await getUserOrders(req.user.id);
+  const orders = await getOrders(req.user.id, req.user.role === "ADMIN");
   res.json(orders);
 };
 
