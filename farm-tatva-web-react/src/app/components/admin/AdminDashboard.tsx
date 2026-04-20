@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminPageHeader } from "./AdminPageHeader";
 import { AdminStatsCard } from "./AdminStatsCard";
@@ -11,7 +11,7 @@ import {
   DollarSign,
   AlertCircle,
 } from "lucide-react";
-import { farmTatvaApi, type ApiOrder, type ApiProduct, type ApiUser } from "@/app/lib/api";
+import { farmTatvaApi, type ApiOrder, type ApiProduct, type ApiUser, type ApiOrderMeta } from "@/app/lib/api";
 import { readStoredSession } from "@/app/lib/auth";
 
 export default function AdminDashboard() {
@@ -19,6 +19,7 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<ApiUser[]>([]);
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [orders, setOrders] = useState<ApiOrder[]>([]);
+  const [orderMeta, setOrderMeta] = useState<ApiOrderMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,15 +34,17 @@ export default function AdminDashboard() {
 
     const loadDashboard = async () => {
       try {
-        const [usersRes, productsRes, ordersRes] = await Promise.all([
+        const [usersRes, productsRes, ordersRes, orderMetaRes] = await Promise.all([
           farmTatvaApi.getUsers(session.token),
           farmTatvaApi.getProducts(),
           farmTatvaApi.getOrders(session.token),
+          farmTatvaApi.getOrderMeta(session.token),
         ]);
 
         setUsers(usersRes);
         setProducts(productsRes);
         setOrders(ordersRes);
+        setOrderMeta(orderMetaRes);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to load dashboard data.");
       } finally {
@@ -63,20 +66,21 @@ export default function AdminDashboard() {
       threshold: 10,
     }));
 
+  const orderStatusMap = useMemo(
+    () =>
+      orderMeta?.orderStatuses.reduce(
+        (acc, statusConfig) => ({
+          ...acc,
+          [statusConfig.value]: statusConfig,
+        }),
+        {} as Record<string, { value: string; label: string; color: string }>,
+      ) ?? {},
+    [orderMeta],
+  );
+
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "delivered":
-        return "text-green-600 bg-green-100";
-      case "confirmed":
-      case "packed":
-      case "out_for_delivery":
-      case "out for delivery":
-        return "text-blue-600 bg-blue-100";
-      case "pending":
-        return "text-gray-600 bg-gray-100";
-      default:
-        return "text-gray-600 bg-gray-100";
-    }
+    const statusConfig = orderStatusMap[status];
+    return statusConfig?.color || "text-gray-600 bg-gray-100";
   };
 
   const dashboardStats = [

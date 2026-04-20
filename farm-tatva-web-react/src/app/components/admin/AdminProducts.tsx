@@ -26,8 +26,8 @@ export default function AdminProducts() {
     price: "",
     stock: "",
     maxStock: "",
-    categoryId: "",
-    imageUrl: "",
+    categoryId: "none",
+    images: [] as string[],
   });
   const [saving, setSaving] = useState(false);
 
@@ -66,7 +66,7 @@ export default function AdminProducts() {
       stock: "",
       maxStock: "",
       categoryId: "none",
-      imageUrl: "",
+      images: [],
     });
     setEditingProduct(null);
   };
@@ -84,7 +84,7 @@ export default function AdminProducts() {
       stock: product.stock.toString(),
       maxStock: product.maxStock.toString(),
       categoryId: product.categoryId || "none",
-      imageUrl: product.imageUrl || "",
+      images: product.images?.map(img => img.imageUrl) || [],
     });
     setEditingProduct(product);
     setDialogOpen(true);
@@ -103,7 +103,7 @@ export default function AdminProducts() {
         stock: parseInt(formData.stock),
         maxStock: parseInt(formData.maxStock),
         categoryId: formData.categoryId === "none" ? null : formData.categoryId || null,
-        imageUrl: formData.imageUrl || null,
+        images: formData.images.filter(url => url.trim() !== ""),
       };
 
       if (editingProduct) {
@@ -332,13 +332,44 @@ export default function AdminProducts() {
             </div>
           </div>
           <div>
-            <Label htmlFor="imageUrl">Image URL</Label>
-            <Input
-              id="imageUrl"
-              value={formData.imageUrl}
-              onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-              placeholder="https://example.com/image.jpg"
-            />
+            <Label htmlFor="images">Product Images</Label>
+            <div className="space-y-2">
+              {formData.images.map((image, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    value={image}
+                    onChange={(e) => {
+                      const newImages = [...formData.images];
+                      newImages[index] = e.target.value;
+                      setFormData({ ...formData, images: newImages });
+                    }}
+                    placeholder="https://example.com/image.jpg"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const newImages = formData.images.filter((_, i) => i !== index);
+                      setFormData({ ...formData, images: newImages });
+                    }}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setFormData({ ...formData, images: [...formData.images, ""] });
+                }}
+              >
+                Add Image
+              </Button>
+            </div>
           </div>
         </div>
       </FormDialog>

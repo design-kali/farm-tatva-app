@@ -1,4 +1,8 @@
 import prisma from "../../config/db.js";
+import {
+  ORDER_STATUSES,
+  VALID_ORDER_TRANSITIONS,
+} from "../../utils/order-constants.js";
 
 export const getOrders = async (userId, isAdmin = false) => {
   return prisma.order.findMany({
@@ -27,6 +31,11 @@ export const getOrders = async (userId, isAdmin = false) => {
 export const getUserOrders = async (userId) => {
   return getOrders(userId, false);
 };
+
+export const getOrderMetadata = () => ({
+  orderStatuses: Object.values(ORDER_STATUSES),
+  validOrderTransitions: VALID_ORDER_TRANSITIONS,
+});
 
 export const placeOrder = async (userId, addressId) => {
   return prisma.$transaction(async (tx) => {
@@ -109,21 +118,12 @@ export const placeOrder = async (userId, addressId) => {
 };
 
 // Admin: update order status
-const validTransitions = {
-  PENDING: ["CONFIRMED", "CANCELLED"],
-  CONFIRMED: ["PACKED", "CANCELLED"],
-  PACKED: ["OUT_FOR_DELIVERY", "CANCELLED"],
-  OUT_FOR_DELIVERY: ["DELIVERED"],
-  DELIVERED: [],
-  CANCELLED: [],
-};
-
 export const updateOrderStatus = async (orderId, status) => {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
   });
 
-  if (!validTransitions[order.status].includes(status)) {
+  if (!VALID_ORDER_TRANSITIONS[order.status].includes(status)) {
     throw new Error(`Cannot move from ${order.status} to ${status}`);
   }
 

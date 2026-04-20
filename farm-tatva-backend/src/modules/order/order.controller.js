@@ -1,6 +1,7 @@
 import {
   placeOrder,
   getOrders,
+  getOrderMetadata as fetchOrderMetadata,
   updateOrderStatus,
 } from "./order.service.js";
 
@@ -26,6 +27,10 @@ export const createOrder = async (req, res) => {
 export const listOrders = async (req, res) => {
   const orders = await getOrders(req.user.id, req.user.role === "ADMIN");
   res.json(orders);
+};
+
+export const getOrderMetadata = async (req, res) => {
+  res.json(fetchOrderMetadata());
 };
 
 export const changeOrderStatus = async (req, res) => {

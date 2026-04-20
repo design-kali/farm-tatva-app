@@ -40,6 +40,13 @@ export interface ApiCategory {
   createdAt: string;
 }
 
+export interface ApiProductImage {
+  id: string;
+  productId: string;
+  imageUrl: string;
+  createdAt: string;
+}
+
 export interface ApiProduct {
   id: string;
   name: string;
@@ -47,9 +54,9 @@ export interface ApiProduct {
   price: number;
   stock: number;
   maxStock: number;
-  imageUrl?: string | null;
   categoryId: string;
   category?: ApiCategory;
+  images?: ApiProductImage[];
 }
 
 export interface ApiCartItem {
@@ -119,6 +126,17 @@ export interface ApiOrder {
   createdAt: string;
 }
 
+export interface ApiOrderStatusMeta {
+  value: string;
+  label: string;
+  color: string;
+}
+
+export interface ApiOrderMeta {
+  orderStatuses: ApiOrderStatusMeta[];
+  validOrderTransitions: Record<string, string[]>;
+}
+
 export interface AuthResponse {
   user: ApiUser;
   token: string;
@@ -129,7 +147,7 @@ export interface ProductCardModel {
   name: string;
   price: number;
   unit: string;
-  image: string;
+  images: string[];
   stockLeafCount: number;
   stockStatusLabel: string;
   farmer: string;
@@ -246,6 +264,7 @@ export const farmTatvaApi = {
   getDeliveryAreas: () => request<ApiDeliveryArea[]>("/delivery-areas"),
   getUsers: (token: string) => request<ApiUser[]>("/users", {}, token),
   getOrders: (token: string) => request<ApiOrder[]>("/orders", {}, token),
+  getOrderMeta: (token: string) => request<ApiOrderMeta>("/orders/meta", {}, token),
   register: (payload: { name: string; email: string; password: string }) =>
     request<AuthResponse>("/auth/register", {
       method: "POST",
@@ -430,7 +449,9 @@ export const mapProductToCard = (
     name: product.name,
     price: product.price,
     unit: inferUnit(product.name),
-    image: product.imageUrl || pickImage(product.name, PRODUCT_IMAGES),
+    images: product.images?.length > 0 
+      ? product.images.map(img => img.imageUrl)
+      : [pickImage(product.name, PRODUCT_IMAGES)],
     stockLeafCount,
     stockStatusLabel: product.stock > 0 ? `${product.stock} left` : "Sold out",
     farmer: farmerName,

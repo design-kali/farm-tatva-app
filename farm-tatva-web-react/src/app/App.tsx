@@ -592,7 +592,7 @@ export default function App() {
             name: product.name,
             price: product.price,
             unit: product.unit,
-            image: product.image,
+            image: product.images[0] || "",
             quantity: 1,
             farmer: product.farmer,
             stock: product.stock,

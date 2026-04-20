@@ -2,6 +2,7 @@ import express from "express";
 import {
   createOrder,
   listOrders,
+  getOrderMetadata,
   changeOrderStatus,
 } from "./order.controller.js";
 
@@ -14,7 +15,13 @@ const router = express.Router();
 router.post("/", authMiddleware, createOrder);
 router.get("/", authMiddleware, listOrders);
 
-// Admin route
+// Admin routes
+router.get(
+  "/meta",
+  authMiddleware,
+  requireRole(["ADMIN"]),
+  getOrderMetadata,
+);
 router.put(
   "/status",
   authMiddleware,

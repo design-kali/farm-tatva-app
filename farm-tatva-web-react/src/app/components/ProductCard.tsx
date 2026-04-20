@@ -23,12 +23,16 @@ export function ProductCard({
   disabled = false,
 }: ProductCardProps) {
   const [flyingLeaf, setFlyingLeaf] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const buttonRef = useRef<HTMLDivElement>(null);
   const isSoldOut = product.stock <= 0;
   const bulkOrderMessage =
     product.unit === "basket"
       ? "Order 2+ baskets for better wholesale pricing"
       : `Order 3+ ${product.unit} for better wholesale pricing`;
+
+  const currentImage = product.images[currentImageIndex] || product.images[0] || "";
+  const hasMultipleImages = product.images.length > 1;
 
   const handleAddToCart = () => {
     if (disabled || isSoldOut) {
@@ -60,13 +64,53 @@ export function ProductCard({
       whileHover={{ y: -4 }}
       className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300"
     >
-      {/* Product Image */}
+      {/* Product Image Carousel */}
       <div className="relative aspect-square overflow-hidden bg-[#F8F4E1]">
-        <img
-          src={product.image}
-          alt={product.name}
-          className="w-full h-full object-cover"
-        />
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={currentImageIndex}
+            src={currentImage}
+            alt={product.name}
+            className="w-full h-full object-cover"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          />
+        </AnimatePresence>
+
+        {/* Image Navigation Dots */}
+        {hasMultipleImages && (
+          <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 flex space-x-2">
+            {product.images.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrentImageIndex(idx)}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  idx === currentImageIndex ? "bg-white" : "bg-white/50"
+                }`}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Image Navigation Arrows */}
+        {hasMultipleImages && (
+          <>
+            <button
+              onClick={() => setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : product.images.length - 1))}
+              className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full hover:bg-black/70 transition-colors"
+            >
+              ‹
+            </button>
+            <button
+              onClick={() => setCurrentImageIndex((prev) => (prev < product.images.length - 1 ? prev + 1 : 0))}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full hover:bg-black/70 transition-colors"
+            >
+              ›
+            </button>
+          </>
+        )}
 
         {/* Market Fresh Today Label */}
         {/* <div className="absolute top-3 left-3 bg-[#1B4332] text-white text-xs px-3 py-1.5 rounded-lg shadow-md">

@@ -40,22 +40,60 @@ export const createProduct = async (data) => {
     maxStock: resolvedMaxStock,
   };
 
-  return prisma.product.upsert({
+  // Handle images separately
+  const { images, ...productFields } = productData;
+
+  const product = await prisma.product.upsert({
     where: {
       name: productName,
     },
-    update: productData,
-    create: productData,
+    update: productFields,
+    create: productFields,
     include: {
       category: true,
+      images: true,
     },
   });
+
+  // Handle images if provided
+  if (images && Array.isArray(images) && images.length > 0) {
+    // Delete existing images first
+    await prisma.productImage.deleteMany({
+      where: { productId: product.id },
+    });
+
+    // Create new images
+    const imageData = images.map(imageUrl => ({
+      productId: product.id,
+      imageUrl: imageUrl.trim(),
+    }));
+
+    await prisma.productImage.createMany({
+      data: imageData,
+    });
+
+    // Fetch updated product with images
+    return prisma.product.findUnique({
+      where: { id: product.id },
+      include: {
+        category: true,
+        images: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+  }
+
+  return product;
 };
 
 export const getProducts = async () => {
   return prisma.product.findMany({
     include: {
       category: true,
+      images: {
+        orderBy: { createdAt: 'asc' },
+      },
     },
   });
 };
@@ -63,7 +101,12 @@ export const getProducts = async () => {
 export const getProductById = async (id) => {
   return prisma.product.findUnique({
     where: { id },
-    include: { category: true },
+    include: { 
+      category: true,
+      images: {
+        orderBy: { createdAt: 'asc' },
+      },
+    },
   });
 };
 
@@ -78,10 +121,53 @@ export const updateProduct = async (id, data) => {
   if (updateData.maxStock && updateData.stock) {
     updateData.maxStock = Math.max(updateData.maxStock, updateData.stock);
   }
-  return prisma.product.update({
+
+  // Handle images separately
+  const { images, ...productFields } = updateData;
+
+  const product = await prisma.product.update({
     where: { id },
-    data: updateData,
-    include: { category: true },
+    data: productFields,
+    include: { 
+      category: true,
+      images: true,
+    },
+  });
+
+  // Handle images if provided
+  if (images !== undefined) {
+    if (Array.isArray(images) && images.length > 0) {
+      // Delete existing images
+      await prisma.productImage.deleteMany({
+        where: { productId: id },
+      });
+
+      // Create new images
+      const imageData = images.map(imageUrl => ({
+        productId: id,
+        imageUrl: imageUrl.trim(),
+      }));
+
+      await prisma.productImage.createMany({
+        data: imageData,
+      });
+    } else if (images === null || images.length === 0) {
+      // Delete all images if explicitly set to empty
+      await prisma.productImage.deleteMany({
+        where: { productId: id },
+      });
+    }
+  }
+
+  // Return updated product with images
+  return prisma.product.findUnique({
+    where: { id },
+    include: { 
+      category: true,
+      images: {
+        orderBy: { createdAt: 'asc' },
+      },
+    },
   });
 };
 

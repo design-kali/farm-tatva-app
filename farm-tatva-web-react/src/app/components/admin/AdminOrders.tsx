@@ -5,9 +5,15 @@ import { AdminCard } from "./AdminCard";
 import { FormDialog } from "./FormDialog";
 import { Button } from "@/app/components/ui/button";
 import { Label } from "@/app/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select";
 import { ShoppingCart, ArrowRight } from "lucide-react";
-import { farmTatvaApi, type ApiOrder } from "@/app/lib/api";
+import { farmTatvaApi, type ApiOrder, type ApiOrderMeta, type ApiOrderStatusMeta } from "@/app/lib/api";
 import { readStoredSession } from "@/app/lib/auth";
 
 export default function AdminOrders() {
@@ -15,6 +21,7 @@ export default function AdminOrders() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [orderMeta, setOrderMeta] = useState<ApiOrderMeta | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<ApiOrder | null>(null);
   const [status, setStatus] = useState("");
@@ -31,8 +38,12 @@ export default function AdminOrders() {
 
     const loadOrders = async () => {
       try {
-        const ordersRes = await farmTatvaApi.getOrders(session.token);
+        const [ordersRes, orderMetaRes] = await Promise.all([
+          farmTatvaApi.getOrders(session.token),
+          farmTatvaApi.getOrderMeta(session.token),
+        ]);
         setOrders(ordersRes);
+        setOrderMeta(orderMetaRes);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unable to load orders.");
       } finally {
@@ -49,10 +60,16 @@ export default function AdminOrders() {
 
     setLoading(true);
     try {
-      const ordersRes = await farmTatvaApi.getOrders(session.token);
+      const [ordersRes, orderMetaRes] = await Promise.all([
+        farmTatvaApi.getOrders(session.token),
+        farmTatvaApi.getOrderMeta(session.token),
+      ]);
       setOrders(ordersRes);
+      setOrderMeta(orderMetaRes);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to refresh orders.");
+      setError(
+        err instanceof Error ? err.message : "Unable to refresh orders.",
+      );
     } finally {
       setLoading(false);
     }
@@ -70,42 +87,75 @@ export default function AdminOrders() {
 
     setUpdating(true);
     try {
-      const updatedOrder = await farmTatvaApi.updateOrderStatus(session.token, selectedOrder.id, status);
-      setOrders(orders.map(o => o.id === selectedOrder.id ? updatedOrder : o));
+      const updatedOrder = await farmTatvaApi.updateOrderStatus(
+        session.token,
+        selectedOrder.id,
+        status,
+      );
+      setOrders(
+        orders.map((o) => (o.id === selectedOrder.id ? updatedOrder : o)),
+      );
       setDialogOpen(false);
       setSelectedOrder(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update order status.");
+      setError(
+        err instanceof Error ? err.message : "Failed to update order status.",
+      );
     } finally {
       setUpdating(false);
     }
   };
 
-  const filteredOrders = useMemo(
+  const orderStatusMap = useMemo(
     () =>
-      orders.filter((order) =>
-        order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.user?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.status.toLowerCase().includes(searchQuery.toLowerCase()),
-      ),
-    [orders, searchQuery],
+      orderMeta?.orderStatuses.reduce(
+        (acc, statusConfig) => ({
+          ...acc,
+          [statusConfig.value]: statusConfig,
+        }),
+        {} as Record<string, ApiOrderStatusMeta>,
+      ) ?? {},
+    [orderMeta],
   );
 
   const getStatusBadge = (status: string) => {
-    const normalized = status.replaceAll("_", " ").toLowerCase();
-    const base = "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ";
-
-    switch (normalized) {
-      case "delivered":
-        return `${base} bg-green-100 text-green-700`;
-      case "cancelled":
-        return `${base} bg-red-100 text-red-700`;
-      case "pending":
-        return `${base} bg-gray-100 text-gray-700`;
-      default:
-        return `${base} bg-blue-100 text-blue-700`;
-    }
+    const statusConfig = orderStatusMap[status];
+    const base =
+      "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ";
+    return statusConfig
+      ? `${base} ${statusConfig.color}`
+      : `${base} bg-gray-100 text-gray-700`;
   };
+
+  const availableStatuses = selectedOrder
+    ? [
+        ...(orderMeta?.validOrderTransitions[selectedOrder.status] || []),
+        selectedOrder.status,
+      ]
+    : [];
+
+  const filteredOrders = useMemo(() => {
+    if (!searchQuery.trim()) return orders;
+
+    const query = searchQuery.toLowerCase();
+    return orders.filter((order) => {
+      const customerName = order.user?.name?.toLowerCase() ?? "";
+      const status = order.status.toLowerCase();
+      const orderId = String(order.id).toLowerCase();
+      const total = String(order.total).toLowerCase();
+      const createdAt = new Date(order.createdAt)
+        .toLocaleDateString()
+        .toLowerCase();
+
+      return (
+        customerName.includes(query) ||
+        status.includes(query) ||
+        orderId.includes(query) ||
+        total.includes(query) ||
+        createdAt.includes(query)
+      );
+    });
+  }, [orders, searchQuery]);
 
   const columns = [
     {
@@ -121,7 +171,9 @@ export default function AdminOrders() {
       key: "status",
       header: "Status",
       render: (value: string) => (
-        <span className={getStatusBadge(value)}>{value.replaceAll("_", " ")}</span>
+        <span className={getStatusBadge(value)}>
+          {value.replaceAll("_", " ")}
+        </span>
       ),
     },
     {
@@ -138,7 +190,11 @@ export default function AdminOrders() {
       key: "actions",
       header: "Actions",
       render: (_value: any, row: ApiOrder) => (
-        <Button variant="outline" size="sm" onClick={() => openStatusDialog(row)}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => openStatusDialog(row)}
+        >
           <ArrowRight className="h-4 w-4" />
         </Button>
       ),
@@ -167,19 +223,29 @@ export default function AdminOrders() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <AdminCard>
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{loading ? "..." : orders.length}</div>
+            <div className="text-2xl font-bold text-blue-600">
+              {loading ? "..." : orders.length}
+            </div>
             <p className="text-sm text-gray-600">Total Orders</p>
           </div>
         </AdminCard>
         <AdminCard>
           <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">{loading ? "..." : orders.filter((o) => o.status === "DELIVERED").length}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {loading
+                ? "..."
+                : orders.filter((o) => o.status === "DELIVERED").length}
+            </div>
             <p className="text-sm text-gray-600">Delivered</p>
           </div>
         </AdminCard>
         <AdminCard>
           <div className="text-center">
-            <div className="text-2xl font-bold text-orange-600">{loading ? "..." : orders.filter((o) => o.status === "PENDING").length}</div>
+            <div className="text-2xl font-bold text-orange-600">
+              {loading
+                ? "..."
+                : orders.filter((o) => o.status === "PENDING").length}
+            </div>
             <p className="text-sm text-gray-600">Pending</p>
           </div>
         </AdminCard>
@@ -192,7 +258,9 @@ export default function AdminOrders() {
         searchable
         onSearch={setSearchQuery}
         loading={loading}
-        emptyMessage={loading ? "Loading orders..." : "No orders match your search."}
+        emptyMessage={
+          loading ? "Loading orders..." : "No orders match your search."
+        }
       />
 
       <FormDialog
@@ -212,12 +280,14 @@ export default function AdminOrders() {
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="PENDING">Pending</SelectItem>
-                <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-                <SelectItem value="PREPARING">Preparing</SelectItem>
-                <SelectItem value="OUT_FOR_DELIVERY">Out for Delivery</SelectItem>
-                <SelectItem value="DELIVERED">Delivered</SelectItem>
-                <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                {availableStatuses.map((statusValue) => {
+                  const statusConfig = orderStatusMap[statusValue];
+                  return (
+                    <SelectItem key={statusValue} value={statusValue}>
+                      {statusConfig?.label || statusValue}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
