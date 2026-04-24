@@ -474,7 +474,10 @@ export default function App() {
       }
 
       const nextAddresses = selectedDeliveryAreaId
-        ? await farmTatvaApi.getAddresses(response.token, selectedDeliveryAreaId)
+        ? await farmTatvaApi.getAddresses(
+            response.token,
+            selectedDeliveryAreaId,
+          )
         : [];
 
       if (!isLatestCartRequest(requestId)) {
@@ -771,7 +774,10 @@ export default function App() {
       const requestId = startCartRequest();
 
       try {
-        const order = await farmTatvaApi.placeOrder(authToken, selectedAddressId);
+        const order = await farmTatvaApi.placeOrder(
+          authToken,
+          selectedAddressId,
+        );
         const backendCart = await farmTatvaApi.getCart(authToken);
 
         if (!isLatestCartRequest(requestId)) {
@@ -956,278 +962,368 @@ export default function App() {
         </div>
       </header>
 
-      <motion.section
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="relative overflow-hidden bg-[#1B4332]"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center py-12 md:py-16">
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-              className="text-white z-10"
-            >
-              <motion.h2
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="text-3xl md:text-5xl lg:text-6xl mb-4 md:mb-6 font-serif leading-tight"
-              >
-                The Farm's Best,
-                <br />
-                <span className="text-[#F8F4E1]">Hand-Picked Today.</span>
-              </motion.h2>
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="text-base md:text-lg lg:text-xl text-white/90 mb-6 md:mb-8 leading-relaxed"
-              >
-                Your storefront is now powered by live backend products,
-                categories, authentication, and cart sync.
-              </motion.p>
-              <motion.button
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() =>
-                  document
-                    .getElementById("products-section")
-                    ?.scrollIntoView({ behavior: "smooth" })
-                }
-                className="px-8 py-4 bg-white text-[#1B4332] rounded-full inline-flex items-center gap-2 shadow-xl hover:shadow-2xl transition-shadow"
-              >
-                <span className="text-lg">Start Your Weekly Stock-Up</span>
-                <Leaf className="w-5 h-5" />
-              </motion.button>
-
+      {/* Banner - Hidden when searching */}
+      {!normalizedSearch && (
+        <motion.section
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="relative overflow-hidden bg-[#1B4332]"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center py-12 md:py-16">
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 }}
-                className="mt-8 md:mt-12 flex flex-wrap gap-6 md:gap-8 text-white/80 text-sm"
+                initial={{ opacity: 0, x: -30 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-white z-10"
               >
-                <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm">
-                    <Leaf className="w-5 h-5 text-white" />
+                <motion.h2
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-3xl md:text-5xl lg:text-6xl mb-4 md:mb-6 font-serif leading-tight"
+                >
+                  The Farm's Best,
+                  <br />
+                  <span className="text-[#F8F4E1]">Hand-Picked Today.</span>
+                </motion.h2>
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="text-base md:text-lg lg:text-xl text-white/90 mb-6 md:mb-8 leading-relaxed"
+                >
+                  Your storefront is now powered by live backend products,
+                  categories, authentication, and cart sync.
+                </motion.p>
+                <motion.button
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() =>
+                    document
+                      .getElementById("products-section")
+                      ?.scrollIntoView({ behavior: "smooth" })
+                  }
+                  className="px-8 py-4 bg-white text-[#1B4332] rounded-full inline-flex items-center gap-2 shadow-xl hover:shadow-2xl transition-shadow"
+                >
+                  <span className="text-lg">Start Your Weekly Stock-Up</span>
+                  <Leaf className="w-5 h-5" />
+                </motion.button>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7 }}
+                  className="mt-8 md:mt-12 flex flex-wrap gap-6 md:gap-8 text-white/80 text-sm"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm">
+                      <Leaf className="w-5 h-5 text-white" />
+                    </div>
+                    <span>Fresh from Trusted Farmers</span>
                   </div>
-                  <span>Fresh from Trusted Farmers</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm">
-                    <Clock className="w-5 h-5 text-white" />
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm">
+                      <Clock className="w-5 h-5 text-white" />
+                    </div>
+                    <span>Delivered Fresh Every Morning</span>
                   </div>
-                  <span>Delivered Fresh Every Morning</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm">
-                    <span className="text-lg">₹</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm">
+                      <span className="text-lg">₹</span>
+                    </div>
+                    <span>Wholesale Prices</span>
                   </div>
-                  <span>Wholesale Prices</span>
-                </div>
+                </motion.div>
               </motion.div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.4 }}
-              className="relative z-10"
-            >
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl">
-                <img
-                  src="https://images.unsplash.com/photo-1474440692490-2e83ae13ba29?w=1200&q=80"
-                  alt="Fresh vegetables in rustic wooden crate"
-                  className="w-full h-full object-cover aspect-[4/3]"
-                />
-                <div className="absolute bottom-6 left-6 bg-white/95 backdrop-blur-sm rounded-2xl px-6 py-4 shadow-xl">
-                  <p className="text-sm text-[#1B4332]/60 mb-1">
-                    Starting from
-                  </p>
-                  <p className="text-2xl font-serif text-[#1B4332]">
-                    ₹{lowestPrice}/kg
-                  </p>
-                </div>
-              </div>
 
               <motion.div
-                animate={{ y: [0, -10, 0] }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="absolute -top-4 -right-4 w-24 h-24 bg-[#F8F4E1] rounded-full opacity-20 blur-2xl"
-              />
-              <motion.div
-                animate={{ y: [0, 10, 0] }}
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="absolute -bottom-8 -left-8 w-32 h-32 bg-[#F8F4E1] rounded-full opacity-20 blur-2xl"
-              />
-            </motion.div>
-          </div>
-        </div>
-
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(circle at top right, #FF9800 0%, #1f6b22 30%, #022404 100%)",
-          }}
-        >
-          <div
-            className="absolute inset-0 opacity-5"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-            }}
-          />
-        </div>
-      </motion.section>
-
-      <section className="py-8 md:py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.h3
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-2xl md:text-3xl text-[#1B4332] mb-3"
-        >
-          Shop by Category
-        </motion.h3>
-        <p className="text-[#1B4332]/70 mb-6">
-          Browse live categories from the backend catalog.
-        </p>
-
-        {catalogError && (
-          <div className="mb-6 rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-            {catalogError}
-          </div>
-        )}
-
-        {catalogLoading ? (
-          <div className="rounded-2xl bg-white px-6 py-8 text-[#1B4332]/60 shadow-sm">
-            Loading categories...
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-            {categories.map((category, index) => (
-              <CategoryCard
-                key={category.id}
-                category={category}
-                index={index}
-                onClick={() => handleCategoryClick(category.name)}
-                isSelected={selectedCategory === category.name}
-              />
-            ))}
-          </div>
-        )}
-
-        <AnimatePresence mode="wait">
-          {selectedCategory && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3 }}
-              className="mt-8 overflow-hidden"
-            >
-              <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-[#1B4332]/10">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h4 className="text-2xl text-[#1B4332] font-serif mb-2">
-                      {selectedCategory}
-                    </h4>
-                    <p className="text-[#1B4332]/70">
-                      {visibleProducts.length} matching items available
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.4 }}
+                className="relative z-10"
+              >
+                <div className="relative rounded-3xl overflow-hidden shadow-2xl">
+                  <img
+                    src="https://images.unsplash.com/photo-1474440692490-2e83ae13ba29?w=1200&q=80"
+                    alt="Fresh vegetables in rustic wooden crate"
+                    className="w-full h-full object-cover aspect-[4/3]"
+                  />
+                  <div className="absolute bottom-6 left-6 bg-white/95 backdrop-blur-sm rounded-2xl px-6 py-4 shadow-xl">
+                    <p className="text-sm text-[#1B4332]/60 mb-1">
+                      Starting from
+                    </p>
+                    <p className="text-2xl font-serif text-[#1B4332]">
+                      ₹{lowestPrice}/kg
                     </p>
                   </div>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setSelectedCategory(null)}
-                    className="px-4 py-2 bg-[#F8F4E1] text-[#1B4332] rounded-full text-sm hover:bg-[#1B4332] hover:text-white transition-colors"
-                  >
-                    Clear Selection
-                  </motion.button>
                 </div>
 
-                {visibleProducts.length === 0 ? (
-                  <div className="rounded-2xl bg-[#F8F4E1] px-6 py-8 text-[#1B4332]/60">
-                    No products match this category and search yet.
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                    {visibleProducts.map((product, index) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        index={index}
-                        onAddToCart={addToCart}
-                        onUpdateQuantity={updateQuantity}
-                        quantity={getItemQuantity(product.id)}
-                        cartIconRef={cartIconRef}
-                        disabled={isCartSubmitting}
-                      />
-                    ))}
-                  </div>
-                )}
+                <motion.div
+                  animate={{ y: [0, -10, 0] }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                  className="absolute -top-4 -right-4 w-24 h-24 bg-[#F8F4E1] rounded-full opacity-20 blur-2xl"
+                />
+                <motion.div
+                  animate={{ y: [0, 10, 0] }}
+                  transition={{
+                    duration: 4,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                  className="absolute -bottom-8 -left-8 w-32 h-32 bg-[#F8F4E1] rounded-full opacity-20 blur-2xl"
+                />
+              </motion.div>
+            </div>
+          </div>
+
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(circle at top right, #FF9800 0%, #1f6b22 30%, #022404 100%)",
+            }}
+          >
+            <div
+              className="absolute inset-0 opacity-5"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+              }}
+            />
+          </div>
+        </motion.section>
+      )}
+
+      {/* Search Results Section - Shows when searching */}
+      <AnimatePresence mode="wait">
+        {normalizedSearch && (
+          <motion.section
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="bg-gradient-to-b from-white to-[#F8F4E1] py-8 md:py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="mb-8"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-3xl md:text-4xl text-[#1B4332] font-serif mb-2">
+                    Search Results
+                  </h2>
+                  <p className="text-[#1B4332]/70">
+                    {visibleProducts.length} result{visibleProducts.length !== 1 ? "s" : ""} found for "{searchQuery.trim()}"
+                  </p>
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setSearchQuery("")}
+                  className="px-4 py-2 bg-[#1B4332] text-white rounded-full text-sm hover:bg-[#1B4332]/80 transition-colors"
+                >
+                  Clear Search
+                </motion.button>
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
+
+            {catalogLoading ? (
+              <div className="rounded-2xl bg-white px-6 py-8 text-[#1B4332]/60 shadow-sm">
+                Loading results...
+              </div>
+            ) : visibleProducts.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="rounded-2xl bg-white px-6 py-12 text-center shadow-sm border-2 border-dashed border-[#1B4332]/20"
+              >
+                <Search className="w-12 h-12 text-[#1B4332]/30 mx-auto mb-4" />
+                <p className="text-[#1B4332]/60 text-lg">
+                  No products found matching "{searchQuery.trim()}"
+                </p>
+                <p className="text-[#1B4332]/40 text-sm mt-2">
+                  Try searching with different keywords
+                </p>
+              </motion.div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                {visibleProducts.map((product, index) => (
+                  <motion.div
+                    key={product.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <ProductCard
+                      product={product}
+                      index={index}
+                      onAddToCart={addToCart}
+                      onUpdateQuantity={updateQuantity}
+                      quantity={getItemQuantity(product.id)}
+                      cartIconRef={cartIconRef}
+                      disabled={isCartSubmitting}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </motion.section>
+        )}
+      </AnimatePresence>
+
+      <section className="py-8 md:py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {!normalizedSearch && (
+          <>
+            <motion.h3
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-2xl md:text-3xl text-[#1B4332] mb-3"
+            >
+              Shop by Category
+            </motion.h3>
+            <p className="text-[#1B4332]/70 mb-6">
+              Browse live categories from the backend catalog.
+            </p>
+
+            {catalogError && (
+              <div className="mb-6 rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                {catalogError}
+              </div>
+            )}
+
+            {catalogLoading ? (
+              <div className="rounded-2xl bg-white px-6 py-8 text-[#1B4332]/60 shadow-sm">
+                Loading categories...
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                {categories.map((category, index) => (
+                  <CategoryCard
+                    key={category.id}
+                    category={category}
+                    index={index}
+                    onClick={() => handleCategoryClick(category.name)}
+                    isSelected={selectedCategory === category.name}
+                  />
+                ))}
+              </div>
+            )}
+
+            <AnimatePresence mode="wait">
+              {selectedCategory && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="mt-8 overflow-hidden"
+                >
+                  <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-[#1B4332]/10">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h4 className="text-2xl text-[#1B4332] font-serif mb-2">
+                          {selectedCategory}
+                        </h4>
+                        <p className="text-[#1B4332]/70">
+                          {visibleProducts.length} matching items available
+                        </p>
+                      </div>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setSelectedCategory(null)}
+                        className="px-4 py-2 bg-[#F8F4E1] text-[#1B4332] rounded-full text-sm hover:bg-[#1B4332] hover:text-white transition-colors"
+                      >
+                        Clear Selection
+                      </motion.button>
+                    </div>
+
+                    {visibleProducts.length === 0 ? (
+                      <div className="rounded-2xl bg-[#F8F4E1] px-6 py-8 text-[#1B4332]/60">
+                        No products match this category and search yet.
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                        {visibleProducts.map((product, index) => (
+                          <ProductCard
+                            key={product.id}
+                            product={product}
+                            index={index}
+                            onAddToCart={addToCart}
+                            onUpdateQuantity={updateQuantity}
+                            quantity={getItemQuantity(product.id)}
+                            cartIconRef={cartIconRef}
+                            disabled={isCartSubmitting}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </>
+        )}
       </section>
 
       <section
         id="products-section"
         className="py-8 md:py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
       >
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mb-6"
-        >
-          <h3 className="text-2xl md:text-3xl text-[#1B4332] mb-2">
-            Fresh Picks Today
-          </h3>
-          <p className="text-[#1B4332]/70">
-            {normalizedSearch
-              ? `Showing results for "${searchQuery.trim()}"`
-              : "Handpicked produce, harvested this morning"}
-          </p>
-        </motion.div>
+        {!normalizedSearch && (
+          <>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="mb-6"
+            >
+              <h3 className="text-2xl md:text-3xl text-[#1B4332] mb-2">
+                Fresh Picks Today
+              </h3>
+              <p className="text-[#1B4332]/70">
+                Handpicked produce, harvested this morning
+              </p>
+            </motion.div>
 
-        {catalogLoading ? (
-          <div className="rounded-2xl bg-white px-6 py-8 text-[#1B4332]/60 shadow-sm">
-            Loading products...
-          </div>
-        ) : visibleProducts.length === 0 ? (
-          <div className="rounded-2xl bg-white px-6 py-8 text-[#1B4332]/60 shadow-sm">
-            No live products matched your current filters.
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {visibleProducts.map((product, index) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                index={index}
-                onAddToCart={addToCart}
-                onUpdateQuantity={updateQuantity}
-                quantity={getItemQuantity(product.id)}
-                cartIconRef={cartIconRef}
-                disabled={isCartSubmitting}
-              />
-            ))}
-          </div>
+            {catalogLoading ? (
+              <div className="rounded-2xl bg-white px-6 py-8 text-[#1B4332]/60 shadow-sm">
+                Loading products...
+              </div>
+            ) : visibleProducts.length === 0 ? (
+              <div className="rounded-2xl bg-white px-6 py-8 text-[#1B4332]/60 shadow-sm">
+                No live products matched your current filters.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                {visibleProducts.map((product, index) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    index={index}
+                    onAddToCart={addToCart}
+                    onUpdateQuantity={updateQuantity}
+                    quantity={getItemQuantity(product.id)}
+                    cartIconRef={cartIconRef}
+                    disabled={isCartSubmitting}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </section>
 
@@ -1343,7 +1439,11 @@ export default function App() {
         isLoading={isDeliveryAreaLoading}
         error={deliveryAreaError}
         onConfirm={handleSelectDeliveryArea}
-        onClose={selectedDeliveryArea ? () => setShowDeliveryAreaDialog(false) : undefined}
+        onClose={
+          selectedDeliveryArea
+            ? () => setShowDeliveryAreaDialog(false)
+            : undefined
+        }
       />
 
       <LoginDialog

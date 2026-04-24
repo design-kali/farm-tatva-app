@@ -45,22 +45,31 @@ export const uploadProductImages = async (req, res) => {
     const filesToSave = [];
     const uploadedFileErrors = [];
 
+    console.log(`[UPLOAD] Validating ${req.files.length} file(s) for product ${productId}`);
+
     for (const file of req.files) {
       const absolutePath = getAbsoluteFilePath(productId, file.filename);
       const fileExists = fs.existsSync(absolutePath);
 
+      console.log(`[UPLOAD] Checking file: ${file.filename}`);
+
       if (!fileExists) {
+        console.error(`[UPLOAD] ✗ File not found on disk: ${absolutePath}`);
         uploadedFileErrors.push(`File ${file.filename} not found on disk`);
       } else {
         // Verify file is not empty
         const stats = fs.statSync(absolutePath);
+        const relativePath = getRelativeImagePath(productId, file.filename);
+
         if (stats.size === 0) {
+          console.error(`[UPLOAD] ✗ File is empty: ${absolutePath}`);
           deleteUploadedFile(productId, file.filename);
           uploadedFileErrors.push(`File ${file.filename} is empty`);
         } else {
+          console.log(`[UPLOAD] ✓ File verified | Size: ${stats.size} bytes | Path: ${relativePath}`);
           filesToSave.push({
             productId,
-            imageUrl: getRelativeImagePath(productId, file.filename),
+            imageUrl: relativePath,
             filename: file.filename, // Keep track of filename for rollback
           });
         }
@@ -88,11 +97,23 @@ export const uploadProductImages = async (req, res) => {
       });
     }
 
+    console.log(`[UPLOAD] All ${filesToSave.length} file(s) verified. Preparing database save...`);
+    filesToSave.forEach((f, idx) => {
+      const absolutePath = getAbsoluteFilePath(productId, f.filename);
+      const stats = fs.statSync(absolutePath);
+      console.log(`[UPLOAD]   [${idx + 1}] ${f.imageUrl} (${stats.size} bytes)`);
+    });
+
     // Remove filename field before saving to database
     const imageDataForDb = filesToSave.map(({ filename, ...data }) => data);
 
     try {
       const uploadedImages = await addProductImages(productId, imageDataForDb);
+
+      console.log(`[UPLOAD] ✓ Database save successful! Saved ${uploadedImages.length} image(s) for product ID: ${productId}`);
+      uploadedImages.forEach((img, idx) => {
+        console.log(`[UPLOAD]   [${idx + 1}] Image ID: ${img.id} | URL: ${img.imageUrl}`);
+      });
 
       res.json({
         success: true,
@@ -101,12 +122,12 @@ export const uploadProductImages = async (req, res) => {
       });
     } catch (dbError) {
       console.error(
-        `[UPLOAD] Database save failed for product ${productId}:`,
+        `[UPLOAD] ✗ Database save failed for product ${productId}:`,
         dbError.message,
       );
       // If database save fails, clean up uploaded files
       filesToSave.forEach((file) => {
-        console.log(`[UPLOAD] Cleaning up file: ${file.imageUrl}`);
+        console.log(`[UPLOAD] Rolling back file: ${file.imageUrl}`);
         deleteUploadedFile(productId, file.filename);
       });
 

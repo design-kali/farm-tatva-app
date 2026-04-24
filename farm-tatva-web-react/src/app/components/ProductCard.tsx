@@ -31,7 +31,8 @@ export function ProductCard({
       ? "Order 2+ baskets for better wholesale pricing"
       : `Order 3+ ${product.unit} for better wholesale pricing`;
 
-  const currentImage = product.images[currentImageIndex] || product.images[0] || "";
+  const currentImage =
+    product.images[currentImageIndex] || product.images[0] || "";
   const hasMultipleImages = product.images.length > 1;
 
   const handleAddToCart = () => {
@@ -55,6 +56,14 @@ export function ProductCard({
       y: cartRect.top - buttonRect.top,
     };
   };
+
+  const multiLineStyle = {
+    display: "-webkit-box",
+    WebkitLineClamp: 2, // Change this to the number of lines you want
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -98,13 +107,21 @@ export function ProductCard({
         {hasMultipleImages && (
           <>
             <button
-              onClick={() => setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : product.images.length - 1))}
+              onClick={() =>
+                setCurrentImageIndex((prev) =>
+                  prev > 0 ? prev - 1 : product.images.length - 1,
+                )
+              }
               className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full hover:bg-black/70 transition-colors"
             >
               ‹
             </button>
             <button
-              onClick={() => setCurrentImageIndex((prev) => (prev < product.images.length - 1 ? prev + 1 : 0))}
+              onClick={() =>
+                setCurrentImageIndex((prev) =>
+                  prev < product.images.length - 1 ? prev + 1 : 0,
+                )
+              }
               className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-1 rounded-full hover:bg-black/70 transition-colors"
             >
               ›
@@ -118,8 +135,8 @@ export function ProductCard({
         </div> */}
 
         {/* Stock Availability Badge */}
-        <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm rounded-2xl px-3 py-2 shadow-md min-w-[5.5rem]">
-          <div className="flex items-center justify-end gap-1">
+        <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm rounded-2xl px-3 py-1 shadow-md min-w-[3.5rem]">
+          {/* <div className="flex items-center justify-end gap-1">
             {[...Array(5)].map((_, i) => (
               <Leaf
                 key={i}
@@ -130,8 +147,8 @@ export function ProductCard({
                 }`}
               />
             ))}
-          </div>
-          <p className="text-[10px] text-right text-[#1B4332]/70 mt-1">
+          </div> */}
+          <p className="text-[10px] text-right text-[#1B4332]/70">
             {product.stockStatusLabel}
           </p>
         </div>
@@ -146,7 +163,9 @@ export function ProductCard({
       {/* Product Info */}
       <div className="p-4">
         <h4 className="text-[#1B4332] mb-1 line-clamp-1">{product.name}</h4>
-        <p className="text-xs text-[#1B4332]/60 mb-3">by {product.farmer}</p>
+        <p className="text-xs text-[#1B4332]/60 mb-3" style={multiLineStyle}>
+          {product.description}
+        </p>
 
         <div className="flex flex-col gap-3 mb-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
