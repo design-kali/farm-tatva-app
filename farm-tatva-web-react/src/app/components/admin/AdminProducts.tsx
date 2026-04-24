@@ -8,9 +8,14 @@ import { Input } from "@/app/components/ui/input";
 import { Label } from "@/app/components/ui/label";
 import { Textarea } from "@/app/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, X, Upload } from "lucide-react";
 import { farmTatvaApi, type ApiProduct, type ApiCategory } from "@/app/lib/api";
 import { readStoredSession } from "@/app/lib/auth";
+
+interface ImageFile {
+  file: File;
+  preview: string;
+}
 
 export default function AdminProducts() {
   const [products, setProducts] = useState<ApiProduct[]>([]);
@@ -27,9 +32,10 @@ export default function AdminProducts() {
     stock: "",
     maxStock: "",
     categoryId: "none",
-    images: [] as string[],
+    imageFiles: [] as ImageFile[],
   });
   const [saving, setSaving] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
 
   useEffect(() => {
     const session = readStoredSession();
@@ -59,6 +65,7 @@ export default function AdminProducts() {
   }, []);
 
   const resetForm = () => {
+    formData.imageFiles.forEach(img => URL.revokeObjectURL(img.preview));
     setFormData({
       name: "",
       description: "",
@@ -66,7 +73,7 @@ export default function AdminProducts() {
       stock: "",
       maxStock: "",
       categoryId: "none",
-      images: [],
+      imageFiles: [],
     });
     setEditingProduct(null);
   };
@@ -84,10 +91,57 @@ export default function AdminProducts() {
       stock: product.stock.toString(),
       maxStock: product.maxStock.toString(),
       categoryId: product.categoryId || "none",
-      images: product.images?.map(img => img.imageUrl) || [],
+      imageFiles: [],
     });
     setEditingProduct(product);
     setDialogOpen(true);
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+
+    const newImages: ImageFile[] = Array.from(e.target.files).map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+
+    setFormData({
+      ...formData,
+      imageFiles: [...formData.imageFiles, ...newImages],
+    });
+
+    // Reset input
+    e.target.value = "";
+  };
+
+  const removeImage = (index: number) => {
+    URL.revokeObjectURL(formData.imageFiles[index].preview);
+    setFormData({
+      ...formData,
+      imageFiles: formData.imageFiles.filter((_, i) => i !== index),
+    });
+  };
+
+  const uploadProductImages = async (productId: string, files: File[]) => {
+    const session = readStoredSession();
+    if (!session?.token || files.length === 0) return;
+
+    const formDataFiles = new FormData();
+    files.forEach((file) => formDataFiles.append("images", file));
+
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/products/${productId}/images`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.token}`,
+      },
+      body: formDataFiles,
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to upload images");
+    }
+
+    return response.json();
   };
 
   const handleSubmit = async () => {
@@ -103,15 +157,32 @@ export default function AdminProducts() {
         stock: parseInt(formData.stock),
         maxStock: parseInt(formData.maxStock),
         categoryId: formData.categoryId === "none" ? null : formData.categoryId || null,
-        images: formData.images.filter(url => url.trim() !== ""),
       };
 
+      let product;
       if (editingProduct) {
-        const updatedProduct = await farmTatvaApi.updateProduct(session.token, editingProduct.id, productData);
-        setProducts(products.map(p => p.id === editingProduct.id ? updatedProduct : p));
+        product = await farmTatvaApi.updateProduct(session.token, editingProduct.id, productData);
+        setProducts(products.map(p => p.id === editingProduct.id ? product : p));
       } else {
-        const newProduct = await farmTatvaApi.createProduct(session.token, productData);
-        setProducts([...products, newProduct]);
+        product = await farmTatvaApi.createProduct(session.token, productData);
+        setProducts([...products, product]);
+      }
+
+      // Upload images if any
+      if (formData.imageFiles.length > 0) {
+        setUploadingImages(true);
+        try {
+          const imageFiles = formData.imageFiles.map(img => img.file);
+          await uploadProductImages(product.id, imageFiles);
+          
+          // Refresh product data to get uploaded images
+          const updatedProduct = await farmTatvaApi.getProduct(product.id);
+          setProducts(products.map(p => p.id === product.id ? updatedProduct : p));
+        } catch (err) {
+          setError("Product created but image upload failed: " + (err instanceof Error ? err.message : "Unknown error"));
+        } finally {
+          setUploadingImages(false);
+        }
       }
 
       setDialogOpen(false);
@@ -333,42 +404,56 @@ export default function AdminProducts() {
           </div>
           <div>
             <Label htmlFor="images">Product Images</Label>
-            <div className="space-y-2">
-              {formData.images.map((image, index) => (
-                <div key={index} className="flex gap-2">
-                  <Input
-                    value={image}
-                    onChange={(e) => {
-                      const newImages = [...formData.images];
-                      newImages[index] = e.target.value;
-                      setFormData({ ...formData, images: newImages });
-                    }}
-                    placeholder="https://example.com/image.jpg"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const newImages = formData.images.filter((_, i) => i !== index);
-                      setFormData({ ...formData, images: newImages });
-                    }}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    Remove
-                  </Button>
+            <div className="space-y-4">
+              {/* File Upload Input */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-500 transition">
+                <input
+                  id="images"
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                  disabled={uploadingImages}
+                />
+                <label htmlFor="images" className="cursor-pointer flex flex-col items-center gap-2">
+                  <Upload className="h-6 w-6 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700">
+                    Click to upload or drag images
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    PNG, JPG, WebP, GIF (Max 5MB each, up to 5 images)
+                  </span>
+                </label>
+              </div>
+
+              {/* Image Previews */}
+              {formData.imageFiles.length > 0 && (
+                <div className="grid grid-cols-3 gap-2">
+                  {formData.imageFiles.map((image, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={image.preview}
+                        alt={`Preview ${index}`}
+                        className="w-full h-24 object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setFormData({ ...formData, images: [...formData.images, ""] });
-                }}
-              >
-                Add Image
-              </Button>
+              )}
+
+              {uploadingImages && (
+                <div className="text-sm text-blue-600 font-medium">
+                  Uploading images...
+                </div>
+              )}
             </div>
           </div>
         </div>

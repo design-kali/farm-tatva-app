@@ -67,7 +67,7 @@ VITE_API_URL="https://your-backend-domain/api" pnpm build
    openssl rand -base64 32
    ```
 
-2. **Database Password** - Change from `fresh@tomato` in production
+2. **Database Password** - Change from `fresh@tomato` in production to `Lkjpoi54321`
 
 3. **CORS** - Check if backend has proper CORS configured for your frontend domain
 

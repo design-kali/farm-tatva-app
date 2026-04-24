@@ -176,3 +176,25 @@ export const deleteProduct = async (id) => {
     where: { id },
   });
 };
+
+export const addProductImages = async (productId, imageData) => {
+  // Verify product exists
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+  });
+
+  if (!product) {
+    throw new Error("Product not found");
+  }
+
+  // Create new images
+  const createdImages = await prisma.productImage.createMany({
+    data: imageData,
+  });
+
+  // Return the created images
+  return prisma.productImage.findMany({
+    where: { productId },
+    orderBy: { createdAt: 'asc' },
+  });
+};

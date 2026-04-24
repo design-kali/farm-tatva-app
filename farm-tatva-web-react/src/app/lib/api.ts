@@ -260,6 +260,7 @@ async function request<T>(
 
 export const farmTatvaApi = {
   getProducts: () => request<ApiProduct[]>("/products"),
+  getProduct: (id: string) => request<ApiProduct>(`/products/${id}`),
   getCategories: () => request<ApiCategory[]>("/categories"),
   getDeliveryAreas: () => request<ApiDeliveryArea[]>("/delivery-areas"),
   getUsers: (token: string) => request<ApiUser[]>("/users", {}, token),

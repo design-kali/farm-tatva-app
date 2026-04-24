@@ -1,11 +1,21 @@
 import express from "express";
-import { addProduct, listProducts, getProduct, editProduct, removeProduct } from "./product.controller.js";
+import { addProduct, listProducts, getProduct, editProduct, removeProduct, uploadProductImages } from "./product.controller.js";
 import { requireRole } from "../../middlewares/role.middleware.js";
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
+import { uploadMiddleware, verifyUploadedFiles, verifyFileSizes } from "../../middlewares/upload.middleware.js";
 
 const router = express.Router();
 
 router.post("/", authMiddleware, requireRole(["ADMIN"]), addProduct);
+router.post(
+  "/:id/images",
+  authMiddleware,
+  requireRole(["ADMIN"]),
+  uploadMiddleware.array("images", 5),
+  verifyUploadedFiles,
+  verifyFileSizes,
+  uploadProductImages
+);
 router.get("/", listProducts);
 router.get("/:id", getProduct);
 router.put("/:id", authMiddleware, requireRole(["ADMIN"]), editProduct);
