@@ -1,5 +1,6 @@
-const API_URL = (import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api")
-  .replace(/\/$/, "");
+const API_URL = (
+  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
+).replace(/\/$/, "");
 
 const CATEGORY_IMAGES = [
   "https://images.unsplash.com/photo-1741515044901-58696421d24a?w=400&q=80",
@@ -265,7 +266,8 @@ export const farmTatvaApi = {
   getDeliveryAreas: () => request<ApiDeliveryArea[]>("/delivery-areas"),
   getUsers: (token: string) => request<ApiUser[]>("/users", {}, token),
   getOrders: (token: string) => request<ApiOrder[]>("/orders", {}, token),
-  getOrderMeta: (token: string) => request<ApiOrderMeta>("/orders/meta", {}, token),
+  getOrderMeta: (token: string) =>
+    request<ApiOrderMeta>("/orders/meta", {}, token),
   register: (payload: { name: string; email: string; password: string }) =>
     request<AuthResponse>("/auth/register", {
       method: "POST",
@@ -327,7 +329,10 @@ export const farmTatvaApi = {
       token,
     ),
   // Admin CRUD: Products
-  createProduct: (token: string, payload: Omit<ApiProduct, "id" | "createdAt">) =>
+  createProduct: (
+    token: string,
+    payload: Omit<ApiProduct, "id" | "createdAt">,
+  ) =>
     request<ApiProduct>(
       "/products",
       {
@@ -352,7 +357,10 @@ export const farmTatvaApi = {
       token,
     ),
   // Admin CRUD: Categories
-  createCategory: (token: string, payload: Omit<ApiCategory, "id" | "createdAt">) =>
+  createCategory: (
+    token: string,
+    payload: Omit<ApiCategory, "id" | "createdAt">,
+  ) =>
     request<ApiCategory>(
       "/categories",
       {
@@ -377,7 +385,10 @@ export const farmTatvaApi = {
       token,
     ),
   // Admin CRUD: Delivery Areas
-  createDeliveryArea: (token: string, payload: Omit<ApiDeliveryArea, "id" | "createdAt">) =>
+  createDeliveryArea: (
+    token: string,
+    payload: Omit<ApiDeliveryArea, "id" | "createdAt">,
+  ) =>
     request<ApiDeliveryArea>(
       "/delivery-areas",
       {
@@ -386,7 +397,11 @@ export const farmTatvaApi = {
       },
       token,
     ),
-  updateDeliveryArea: (token: string, id: string, payload: Partial<ApiDeliveryArea>) =>
+  updateDeliveryArea: (
+    token: string,
+    id: string,
+    payload: Partial<ApiDeliveryArea>,
+  ) =>
     request<ApiDeliveryArea>(
       `/delivery-areas/${id}`,
       {
@@ -412,11 +427,7 @@ export const farmTatvaApi = {
       token,
     ),
   deleteUser: (token: string, id: string) =>
-    request<{ success: boolean }>(
-      `/users/${id}`,
-      { method: "DELETE" },
-      token,
-    ),
+    request<{ success: boolean }>(`/users/${id}`, { method: "DELETE" }, token),
   // Admin: Update Order Status
   updateOrderStatus: (token: string, orderId: string, status: string) =>
     request<ApiOrder>(
@@ -435,30 +446,32 @@ export const mapProductToCard = (
 ): ProductCardModel => {
   const categoryName = product.category?.name || "Fresh Produce";
   const farmerName =
-    FARMER_NAMES[slugToNumber(product.id || `${product.name}-${index}`) % FARMER_NAMES.length];
+    FARMER_NAMES[
+      slugToNumber(product.id || `${product.name}-${index}`) %
+        FARMER_NAMES.length
+    ];
   const maxStock = Math.max(product.maxStock || 0, product.stock || 0);
   const stockLeafCount =
     product.stock <= 0
       ? 0
-      : Math.max(
-          1,
-          Math.ceil((product.stock / Math.max(maxStock, 1)) * 5),
-        );
+      : Math.max(1, Math.ceil((product.stock / Math.max(maxStock, 1)) * 5));
 
   return {
     id: product.id,
     name: product.name,
     price: product.price,
     unit: inferUnit(product.name),
-    images: product.images?.length > 0 
-      ? product.images.map(img => img.imageUrl)
-      : [pickImage(product.name, PRODUCT_IMAGES)],
+    images:
+      product.images?.length > 0
+        ? product.images.map((img) => img.imageUrl)
+        : [pickImage(product.name, PRODUCT_IMAGES)],
     stockLeafCount,
     stockStatusLabel: product.stock > 0 ? `${product.stock} left` : "Sold out",
     farmer: farmerName,
-    deliveryTime: product.stock > 0 ? "Tomorrow 6 AM" : "Restocking",
+    deliveryTime: product.stock > 0 ? "Tomorrow morning" : "Restocking",
     description:
-      product.description || `Fresh ${categoryName.toLowerCase()} from FarmTatva.`,
+      product.description ||
+      `Fresh ${categoryName.toLowerCase()} from FarmTatva.`,
     stock: product.stock,
     maxStock,
     categoryName,
@@ -474,7 +487,7 @@ export const mapCartToItems = (cart: ApiCart | null | undefined) => {
       name: mappedProduct.name,
       price: mappedProduct.price,
       unit: mappedProduct.unit,
-      image: mappedProduct.image,
+      image: mappedProduct.images[0] || "",
       quantity: item.quantity,
       farmer: mappedProduct.farmer,
       stock: mappedProduct.stock,

@@ -172,8 +172,45 @@ export const updateProduct = async (id, data) => {
 };
 
 export const deleteProduct = async (id) => {
-  return prisma.product.delete({
+  // Check if product exists
+  const product = await prisma.product.findUnique({
     where: { id },
+    include: {
+      orderItems: {
+        select: {
+          orderId: true,
+        },
+      },
+    },
+  });
+
+  if (!product) {
+    throw new Error("Product not found");
+  }
+
+  // Check if product is referenced in any orders
+  if (product.orderItems.length > 0) {
+    throw new Error(
+      `Cannot delete product. It is referenced in ${product.orderItems.length} order(s). Archive or mark as inactive instead.`,
+    );
+  }
+
+  // Delete in transaction to ensure consistency
+  return prisma.$transaction(async (tx) => {
+    // Delete cart items referencing this product
+    await tx.cartItem.deleteMany({
+      where: { productId: id },
+    });
+
+    // Delete product images
+    await tx.productImage.deleteMany({
+      where: { productId: id },
+    });
+
+    // Delete the product
+    return tx.product.delete({
+      where: { id },
+    });
   });
 };
 

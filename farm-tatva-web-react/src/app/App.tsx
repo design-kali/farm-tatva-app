@@ -1124,7 +1124,9 @@ export default function App() {
                     Search Results
                   </h2>
                   <p className="text-[#1B4332]/70">
-                    {visibleProducts.length} result{visibleProducts.length !== 1 ? "s" : ""} found for "{searchQuery.trim()}"
+                    {visibleProducts.length} result
+                    {visibleProducts.length !== 1 ? "s" : ""} found for "
+                    {searchQuery.trim()}"
                   </p>
                 </div>
                 <motion.button
@@ -1439,11 +1441,7 @@ export default function App() {
         isLoading={isDeliveryAreaLoading}
         error={deliveryAreaError}
         onConfirm={handleSelectDeliveryArea}
-        onClose={
-          selectedDeliveryArea
-            ? () => setShowDeliveryAreaDialog(false)
-            : undefined
-        }
+        onClose={() => setShowDeliveryAreaDialog(false)}
       />
 
       <LoginDialog

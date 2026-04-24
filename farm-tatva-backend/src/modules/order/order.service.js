@@ -22,7 +22,7 @@ export const getOrders = async (userId, isAdmin = false) => {
       },
       address: true,
       items: {
-        include: { product: true },
+        include: { product: { include: { images: true } } },
       },
     },
   });
@@ -56,7 +56,7 @@ export const placeOrder = async (userId, addressId) => {
       where: { userId },
       include: {
         items: {
-          include: { product: true },
+          include: { product: { include: { images: true } } },
         },
       },
     });

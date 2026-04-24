@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { CheckCircle2, MapPin } from "lucide-react";
-import {
-  formatDeliveryAreaAddress,
-  type ApiDeliveryArea,
-} from "../lib/api";
+import { CheckCircle2, MapPin, X } from "lucide-react";
+import { formatDeliveryAreaAddress, type ApiDeliveryArea } from "../lib/api";
 
 interface DeliveryAreaDialogProps {
   isOpen: boolean;
@@ -33,8 +30,6 @@ export function DeliveryAreaDialog({
     }
   }, [isOpen, selectedAreaId]);
 
-  const canClose = Boolean(selectedAreaId && onClose);
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -44,11 +39,7 @@ export function DeliveryAreaDialog({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[70] bg-[#1B4332]/45 backdrop-blur-sm"
-            onClick={() => {
-              if (canClose) {
-                onClose?.();
-              }
-            }}
+            onClick={() => onClose?.()}
           />
 
           <motion.div
@@ -72,15 +63,15 @@ export function DeliveryAreaDialog({
                 </p>
               </div>
 
-              {canClose && (
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="rounded-full bg-white px-3 py-2 text-xs text-[#1B4332] shadow-sm transition-colors hover:bg-[#1B4332] hover:text-white"
-                >
-                  Close
-                </button>
-              )}
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                type="button"
+                onClick={onClose}
+                className="rounded-full bg-[#F8F4E1] p-2 text-[#1B4332] transition-colors hover:bg-red-100 hover:text-red-600"
+              >
+                <X className="h-5 w-5" />
+              </motion.button>
             </div>
 
             {error && (
@@ -95,7 +86,8 @@ export function DeliveryAreaDialog({
               </div>
             ) : areas.length === 0 ? (
               <div className="rounded-3xl bg-white px-4 py-10 text-center text-sm text-[#1B4332]/60">
-                No delivery areas are configured yet.
+                No delivery areas are configured yet. Contact support to get
+                this resolved.
               </div>
             ) : (
               <div className="space-y-3">

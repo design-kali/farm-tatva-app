@@ -6,6 +6,7 @@ const cartInclude = {
       product: {
         include: {
           category: true,
+          images: true,
         },
       },
     },
