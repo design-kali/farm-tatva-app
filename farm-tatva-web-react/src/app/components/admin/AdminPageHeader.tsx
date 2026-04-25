@@ -9,15 +9,19 @@ interface AdminPageHeaderProps {
 
 export function AdminPageHeader({ title, description, actions }: AdminPageHeaderProps) {
   return (
-    <div className="mb-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+    <div className="mb-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">{title}</h1>
           {description && (
-            <p className="mt-1 text-sm text-gray-600">{description}</p>
+            <p className="mt-1 max-w-2xl text-sm text-gray-600">{description}</p>
           )}
         </div>
-        {actions && <div className="flex items-center space-x-3">{actions}</div>}
+        {actions && (
+          <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto sm:justify-end">
+            {actions}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -144,7 +144,7 @@ export default function AdminDashboard() {
         <AdminCard
           title="Recent Orders"
           headerAction={
-            <Button variant="outline" size="sm" onClick={() => navigate("/admin/orders")}>
+            <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => navigate("/admin/orders")}>
               View All
             </Button>
           }
@@ -156,21 +156,21 @@ export default function AdminDashboard() {
               <div className="text-center py-10 text-gray-500">No orders yet.</div>
             ) : (
               orders.slice(0, 4).map((order) => (
-                <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
+                <div key={order.id} className="flex flex-col gap-3 rounded-lg bg-gray-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-center space-x-3">
                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                       <ShoppingCart className="h-5 w-5 text-blue-600" />
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-900">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-gray-900">
                         {order.user?.name ?? "Unknown Customer"}
                       </p>
-                      <p className="text-sm text-gray-600">
+                      <p className="truncate text-sm text-gray-600">
                         {order.id} • {new Date(order.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-left sm:text-right">
                     <p className="font-medium text-gray-900">₹{order.total.toFixed(2)}</p>
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
                       {order.status.replaceAll("_", " ")}
@@ -185,7 +185,7 @@ export default function AdminDashboard() {
         <AdminCard
           title="Low Stock Alerts"
           headerAction={
-            <Button variant="outline" size="sm" onClick={() => navigate("/admin/products")}>
+            <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => navigate("/admin/products")}>
               Manage Inventory
             </Button>
           }
@@ -197,19 +197,19 @@ export default function AdminDashboard() {
               <div className="text-center py-10 text-gray-500">All products have healthy stock levels.</div>
             ) : (
               lowStockItems.map((item, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="flex items-center space-x-3">
+                <div key={index} className="flex flex-col gap-3 rounded-lg border border-red-200 bg-red-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-center space-x-3">
                     <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
                       <AlertCircle className="h-5 w-5 text-red-600" />
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{item.name}</p>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-gray-900">{item.name}</p>
                       <p className="text-sm text-gray-600">
                         {item.stock} remaining (threshold: {item.threshold})
                       </p>
                     </div>
                   </div>
-                  <Button size="sm" variant="outline">
+                  <Button size="sm" variant="outline" className="w-full sm:w-auto">
                     Restock
                   </Button>
                 </div>
@@ -220,7 +220,7 @@ export default function AdminDashboard() {
       </div>
 
       <AdminCard title="Quick Actions" className="mt-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Button className="h-20 flex flex-col items-center justify-center space-y-2">
             <Package className="h-6 w-6" />
             <span>Add New Product</span>

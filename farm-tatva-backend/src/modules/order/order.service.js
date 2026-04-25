@@ -4,6 +4,51 @@ import {
   VALID_ORDER_TRANSITIONS,
 } from "../../utils/order-constants.js";
 import { serializeUser } from "../user/user.utils.js";
+import {
+  calculatePricingBreakdown,
+  roundNumber,
+} from "../product/pricing.utils.js";
+
+const orderInclude = {
+  user: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      createdAt: true,
+    },
+  },
+  address: true,
+  items: {
+    include: {
+      product: {
+        include: {
+          images: {
+            orderBy: { createdAt: "asc" },
+          },
+        },
+      },
+      pricingOption: true,
+    },
+  },
+};
+
+const serializeOrder = (order) => ({
+  ...order,
+  subtotal: Number(order.subtotal ?? 0),
+  discount: Number(order.discount ?? 0),
+  total: Number(order.total ?? 0),
+  user: serializeUser(order.user),
+  items: (order.items || []).map((item) => ({
+    ...item,
+    quantity: Number(item.quantity),
+    unitPrice: Number(item.unitPrice),
+    subtotal: Number(item.subtotal),
+    discount: Number(item.discount),
+    total: Number(item.total),
+  })),
+});
 
 export const getOrders = async (userId, isAdmin = false) => {
   const orders = await prisma.order.findMany({
@@ -11,27 +56,10 @@ export const getOrders = async (userId, isAdmin = false) => {
     orderBy: {
       createdAt: "desc",
     },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-          createdAt: true,
-        },
-      },
-      address: true,
-      items: {
-        include: { product: { include: { images: true } } },
-      },
-    },
+    include: orderInclude,
   });
 
-  return orders.map((order) => ({
-    ...order,
-    user: serializeUser(order.user),
-  }));
+  return orders.map(serializeOrder);
 };
 
 export const getUserOrders = async (userId) => {
@@ -45,7 +73,6 @@ export const getOrderMetadata = () => ({
 
 export const placeOrder = async (userId, addressId) => {
   return prisma.$transaction(async (tx) => {
-    // 1. Validate address
     const address = await tx.address.findFirst({
       where: {
         id: addressId,
@@ -57,12 +84,20 @@ export const placeOrder = async (userId, addressId) => {
       throw new Error("Invalid address");
     }
 
-    // 2. Get cart
     const cart = await tx.cart.findUnique({
       where: { userId },
       include: {
         items: {
-          include: { product: { include: { images: true } } },
+          include: {
+            product: true,
+            pricingOption: {
+              include: {
+                offers: {
+                  orderBy: [{ minQuantity: "asc" }, { createdAt: "asc" }],
+                },
+              },
+            },
+          },
         },
       },
     });
@@ -71,18 +106,23 @@ export const placeOrder = async (userId, addressId) => {
       throw new Error("Cart is empty");
     }
 
-    // 3. 🔥 Atomic stock validation + deduction
+    const orderItems = [];
+
     for (const item of cart.items) {
+      const quantity = Number(item.quantity);
+      const inventoryRequired = roundNumber(
+        quantity * Number(item.pricingOption.inventoryFactor),
+      );
       const updated = await tx.product.updateMany({
         where: {
           id: item.productId,
           stock: {
-            gte: item.quantity,
+            gte: inventoryRequired,
           },
         },
         data: {
           stock: {
-            decrement: item.quantity,
+            decrement: inventoryRequired,
           },
         },
       });
@@ -90,40 +130,57 @@ export const placeOrder = async (userId, addressId) => {
       if (updated.count === 0) {
         throw new Error(`Insufficient stock for ${item.product.name}`);
       }
+
+      const pricing = calculatePricingBreakdown(item.pricingOption, quantity);
+
+      orderItems.push({
+        productId: item.productId,
+        pricingOptionId: item.pricingOptionId,
+        quantity,
+        unit: item.pricingOption.unit,
+        optionLabel: item.pricingOption.label,
+        unitPrice: Number(item.pricingOption.price),
+        subtotal: pricing.subtotal,
+        discount: pricing.discount,
+        total: pricing.total,
+      });
     }
 
-    // 4. Calculate total
-    const total = cart.items.reduce((sum, item) => {
-      return sum + item.quantity * item.product.price;
-    }, 0);
+    const subtotal = roundNumber(
+      orderItems.reduce((sum, item) => sum + item.subtotal, 0),
+      2,
+    );
+    const discount = roundNumber(
+      orderItems.reduce((sum, item) => sum + item.discount, 0),
+      2,
+    );
+    const total = roundNumber(
+      orderItems.reduce((sum, item) => sum + item.total, 0),
+      2,
+    );
 
-    // 5. Create order
     const order = await tx.order.create({
       data: {
         userId,
         addressId,
+        subtotal,
+        discount,
         total,
         items: {
-          create: cart.items.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.product.price,
-          })),
+          create: orderItems,
         },
       },
-      include: { items: true },
+      include: orderInclude,
     });
 
-    // 6. Clear cart
     await tx.cartItem.deleteMany({
       where: { cartId: cart.id },
     });
 
-    return order;
+    return serializeOrder(order);
   });
 };
 
-// Admin: update order status
 export const updateOrderStatus = async (orderId, status) => {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
@@ -133,8 +190,11 @@ export const updateOrderStatus = async (orderId, status) => {
     throw new Error(`Cannot move from ${order.status} to ${status}`);
   }
 
-  return prisma.order.update({
+  const updatedOrder = await prisma.order.update({
     where: { id: orderId },
     data: { status },
+    include: orderInclude,
   });
+
+  return serializeOrder(updatedOrder);
 };

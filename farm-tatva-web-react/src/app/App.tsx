@@ -20,12 +20,15 @@ import { FeatureCard } from "./components/FeatureCard";
 import { LoginDialog } from "./components/LoginDialog";
 import { DeliveryAreaDialog } from "./components/DeliveryAreaDialog";
 import {
+  calculatePricingBreakdown,
   farmTatvaApi,
+  formatQuantity,
   mapCartToItems,
   mapCategories,
   mapProductToCard,
   type ApiAddress,
   type ApiDeliveryArea,
+  type ApiPricingOption,
   type ApiUser,
   type CartItemModel as CartItem,
   type CategoryCardModel,
@@ -158,6 +161,27 @@ const normalizeMobileNumber = (value: string) => {
   return value.replace(/\D/g, "").slice(0, 10);
 };
 
+const createGuestCartItem = (
+  product: ProductCardModel,
+  pricingOption: ApiPricingOption,
+  quantity: number,
+): CartItem => ({
+  id: `${product.id}:${pricingOption.id}`,
+  productId: product.id,
+  pricingOptionId: pricingOption.id,
+  name: product.name,
+  optionLabel: pricingOption.label,
+  unit: pricingOption.unit,
+  quantityStep: pricingOption.quantityStep,
+  image: product.images[0] || "",
+  quantity,
+  farmer: product.farmer,
+  stock: product.stock,
+  maxStock: product.maxStock,
+  categoryName: product.categoryName,
+  pricing: calculatePricingBreakdown(pricingOption, quantity),
+});
+
 export default function App() {
   const [session, setSession] = useState<StoredSession | null>(() =>
     readStoredSession(),
@@ -233,12 +257,16 @@ export default function App() {
       products.length > 0
         ? products
         : (await farmTatvaApi.getProducts()).map(mapProductToCard);
-    const availableProductIds = new Set(
-      availableProducts.map((product) => product.id),
+    const availablePricingOptionIds = new Set(
+      availableProducts.flatMap((product) =>
+        product.pricingOptions.map((option) => option.id),
+      ),
     );
-    const validItems = guestCart.filter((item) => availableProductIds.has(item.id));
+    const validItems = guestCart.filter((item) =>
+      availablePricingOptionIds.has(item.pricingOptionId),
+    );
     const skippedItems = guestCart.filter(
-      (item) => !availableProductIds.has(item.id),
+      (item) => !availablePricingOptionIds.has(item.pricingOptionId),
     );
 
     let syncedCount = 0;
@@ -251,12 +279,16 @@ export default function App() {
     const remainingGuestItems = [...validItems];
 
     for (const item of guestCart) {
-      if (!availableProductIds.has(item.id)) {
+      if (!availablePricingOptionIds.has(item.pricingOptionId)) {
         continue;
       }
 
       try {
-        await farmTatvaApi.addToCart(token, item.id, item.quantity);
+        await farmTatvaApi.addToCart(
+          token,
+          item.pricingOptionId,
+          item.quantity,
+        );
         syncedCount += 1;
         const itemIndex = remainingGuestItems.findIndex(
           (guestItem) => guestItem.id === item.id,
@@ -643,38 +675,48 @@ export default function App() {
     }
   };
 
-  const getItemQuantity = (productId: string) => {
-    const item = cart.find((cartItem) => cartItem.id === productId);
-    return item ? item.quantity : 0;
+  const getCartLine = (
+    productId: string,
+    pricingOptionId: string,
+  ) => {
+    const item = cart.find(
+      (cartItem) =>
+        cartItem.productId === productId &&
+        cartItem.pricingOptionId === pricingOptionId,
+    );
+    return item ? { id: item.id, quantity: item.quantity } : null;
   };
 
-  const addToCart = async (product: ProductCardModel) => {
+  const addToCart = async (
+    product: ProductCardModel,
+    pricingOption: ApiPricingOption,
+  ) => {
     if (!authToken) {
       const nextCart = (() => {
-        const existingItem = cart.find((item) => item.id === product.id);
+        const existingItem = cart.find(
+          (item) => item.pricingOptionId === pricingOption.id,
+        );
+        const nextQuantity = Number(
+          (
+            (existingItem?.quantity || 0) + Number(pricingOption.quantityStep)
+          ).toFixed(3),
+        );
 
         if (existingItem) {
           return cart.map((item) =>
-            item.id === product.id
-              ? { ...item, quantity: item.quantity + 1 }
+            item.pricingOptionId === pricingOption.id
+              ? createGuestCartItem(product, pricingOption, nextQuantity)
               : item,
           );
         }
 
         return [
           ...cart,
-          {
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            unit: product.unit,
-            image: product.images[0] || "",
-            quantity: 1,
-            farmer: product.farmer,
-            stock: product.stock,
-            maxStock: product.maxStock,
-            categoryName: product.categoryName,
-          },
+          createGuestCartItem(
+            product,
+            pricingOption,
+            pricingOption.minQuantity,
+          ),
         ];
       })();
 
@@ -686,7 +728,15 @@ export default function App() {
       return;
     }
 
-    if (product.stock > 0 && getItemQuantity(product.id) >= product.stock) {
+    const currentQuantity =
+      getCartLine(product.id, pricingOption.id)?.quantity || 0;
+    const nextQuantity = Number(
+      (currentQuantity + pricingOption.quantityStep).toFixed(3),
+    );
+    const requiredInventory =
+      nextQuantity * Number(pricingOption.inventoryFactor);
+
+    if (product.stock > 0 && requiredInventory > product.stock + 0.000001) {
       setCartMessage(
         "You have already added all available stock for this item.",
       );
@@ -700,8 +750,8 @@ export default function App() {
     try {
       const backendCart = await farmTatvaApi.addToCart(
         authToken,
-        product.id,
-        1,
+        pricingOption.id,
+        pricingOption.quantityStep,
       );
 
       if (!isLatestCartRequest(requestId)) {
@@ -720,23 +770,38 @@ export default function App() {
     }
   };
 
-  const updateQuantity = async (productId: string, change: number) => {
+  const updateQuantity = async (cartItemId: string, nextQuantity: number) => {
     if (!authToken) {
-      const existingItem = cart.find((item) => item.id === productId);
+      const existingItem = cart.find((item) => item.id === cartItemId);
 
       if (!existingItem) {
         return;
       }
 
-      if (change > 0 && existingItem.quantity >= existingItem.stock) {
+      if (nextQuantity > 0 && nextQuantity * existingItem.quantityStep > existingItem.stock + 0.000001) {
         setCartMessage("You have reached the available stock for this item.");
         return;
       }
 
       const nextCart = cart
         .map((item) =>
-          item.id === productId
-            ? { ...item, quantity: item.quantity + change }
+          item.id === cartItemId
+            ? (() => {
+                const product = products.find(
+                  (currentProduct) => currentProduct.id === item.productId,
+                );
+                const pricingOption = product?.pricingOptions.find(
+                  (option) => option.id === item.pricingOptionId,
+                );
+
+                return {
+                  ...item,
+                  quantity: nextQuantity,
+                  pricing: pricingOption
+                    ? calculatePricingBreakdown(pricingOption, nextQuantity)
+                    : item.pricing,
+                };
+              })()
             : item,
         )
         .filter((item) => item.quantity > 0);
@@ -746,16 +811,9 @@ export default function App() {
       return;
     }
 
-    const existingItem = cart.find((item) => item.id === productId);
+    const existingItem = cart.find((item) => item.id === cartItemId);
 
     if (!existingItem) {
-      return;
-    }
-
-    const nextQuantity = existingItem.quantity + change;
-
-    if (change > 0 && existingItem.quantity >= existingItem.stock) {
-      setCartMessage("You have reached the available stock for this item.");
       return;
     }
 
@@ -766,10 +824,10 @@ export default function App() {
     try {
       const backendCart =
         nextQuantity <= 0
-          ? await farmTatvaApi.removeCartItem(authToken, productId)
+          ? await farmTatvaApi.removeCartItem(authToken, cartItemId)
           : await farmTatvaApi.updateCartItem(
               authToken,
-              productId,
+              cartItemId,
               nextQuantity,
             );
 
@@ -789,9 +847,9 @@ export default function App() {
     }
   };
 
-  const removeFromCart = async (productId: string) => {
+  const removeFromCart = async (cartItemId: string) => {
     if (!authToken) {
-      const nextCart = cart.filter((item) => item.id !== productId);
+      const nextCart = cart.filter((item) => item.id !== cartItemId);
 
       setCart(nextCart);
       persistGuestCart(nextCart);
@@ -805,7 +863,7 @@ export default function App() {
     try {
       const backendCart = await farmTatvaApi.removeCartItem(
         authToken,
-        productId,
+        cartItemId,
       );
 
       if (!isLatestCartRequest(requestId)) {
@@ -874,13 +932,14 @@ export default function App() {
     })();
   };
 
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
+  const totalItems = cart.length;
+  const totalPrice = Number(
+    cart.reduce((sum, item) => sum + item.pricing.total, 0).toFixed(2),
   );
   const lowestPrice = products.length
-    ? Math.min(...products.map((product) => product.price))
+    ? Math.min(
+        ...products.map((product) => product.defaultPricingOption.price),
+      )
     : 35;
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const visibleProducts = products.filter((product) => {
@@ -1246,7 +1305,7 @@ export default function App() {
                       index={index}
                       onAddToCart={addToCart}
                       onUpdateQuantity={updateQuantity}
-                      quantity={getItemQuantity(product.id)}
+                      getCartLine={getCartLine}
                       cartIconRef={cartIconRef}
                       disabled={isCartSubmitting}
                     />
@@ -1339,7 +1398,7 @@ export default function App() {
                             index={index}
                             onAddToCart={addToCart}
                             onUpdateQuantity={updateQuantity}
-                            quantity={getItemQuantity(product.id)}
+                            getCartLine={getCartLine}
                             cartIconRef={cartIconRef}
                             disabled={isCartSubmitting}
                           />
@@ -1391,7 +1450,7 @@ export default function App() {
                     index={index}
                     onAddToCart={addToCart}
                     onUpdateQuantity={updateQuantity}
-                    quantity={getItemQuantity(product.id)}
+                    getCartLine={getCartLine}
                     cartIconRef={cartIconRef}
                     disabled={isCartSubmitting}
                   />

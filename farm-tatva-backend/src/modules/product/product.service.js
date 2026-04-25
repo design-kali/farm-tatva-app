@@ -1,178 +1,192 @@
 import prisma from "../../config/db.js";
+import {
+  normalizePricingOptionsInput,
+  serializeProduct,
+  toNonNegativeNumber,
+} from "./pricing.utils.js";
 
-const toNonNegativeInt = (value, fallback = 0) => {
-  if (value === undefined || value === null || value === "") {
-    return fallback;
-  }
-
-  const parsedValue = Number(value);
-
-  if (!Number.isFinite(parsedValue) || parsedValue < 0) {
-    throw new Error("Stock values must be non-negative numbers");
-  }
-
-  return Math.floor(parsedValue);
+const productInclude = {
+  category: true,
+  images: {
+    orderBy: { createdAt: "asc" },
+  },
+  pricingOptions: {
+    include: {
+      offers: {
+        orderBy: [{ minQuantity: "asc" }, { createdAt: "asc" }],
+      },
+    },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  },
 };
 
-export const createProduct = async (data) => {
+const buildProductPayload = (data, existingProduct) => {
   const productName = data.name?.trim();
 
   if (!productName) {
     throw new Error("Product name is required");
   }
 
-  const existingProduct = await prisma.product.findUnique({
-    where: {
-      name: productName,
-    },
-  });
+  const stock = toNonNegativeNumber(
+    data.stock,
+    "Stock",
+    Number(existingProduct?.stock ?? 0),
+  );
+  const maxStock = Math.max(
+    toNonNegativeNumber(
+      data.maxStock,
+      "Max stock",
+      Number(existingProduct?.maxStock ?? stock),
+    ),
+    stock,
+  );
+  const inventoryUnit = String(
+    data.inventoryUnit || existingProduct?.inventoryUnit || "kg",
+  ).trim();
 
-  const resolvedStock = toNonNegativeInt(data.stock, existingProduct?.stock ?? 0);
-  const resolvedMaxStock = Math.max(
-    toNonNegativeInt(data.maxStock, existingProduct?.maxStock ?? resolvedStock),
-    resolvedStock,
+  if (!inventoryUnit) {
+    throw new Error("Inventory unit is required");
+  }
+
+  const pricingOptions = normalizePricingOptionsInput(
+    data.pricingOptions,
+    data.price ?? existingProduct?.price,
+    data.unit ?? existingProduct?.inventoryUnit ?? "unit",
   );
 
-  const productData = {
-    ...data,
+  return {
     name: productName,
-    stock: resolvedStock,
-    maxStock: resolvedMaxStock,
+    description: data.description?.trim() || null,
+    categoryId: data.categoryId,
+    stock,
+    maxStock,
+    inventoryUnit,
+    pricingOptions,
   };
+};
 
-  // Handle images separately
-  const { images, ...productFields } = productData;
-
-  const product = await prisma.product.upsert({
-    where: {
-      name: productName,
-    },
-    update: productFields,
-    create: productFields,
-    include: {
-      category: true,
-      images: true,
-    },
+const savePricingOptions = async (tx, productId, pricingOptions) => {
+  await tx.productOfferRule.deleteMany({
+    where: { pricingOption: { productId } },
+  });
+  await tx.productPricingOption.deleteMany({
+    where: { productId },
   });
 
-  // Handle images if provided
-  if (images && Array.isArray(images) && images.length > 0) {
-    // Delete existing images first
-    await prisma.productImage.deleteMany({
-      where: { productId: product.id },
-    });
-
-    // Create new images
-    const imageData = images.map(imageUrl => ({
-      productId: product.id,
-      imageUrl: imageUrl.trim(),
-    }));
-
-    await prisma.productImage.createMany({
-      data: imageData,
-    });
-
-    // Fetch updated product with images
-    return prisma.product.findUnique({
-      where: { id: product.id },
-      include: {
-        category: true,
-        images: {
-          orderBy: { createdAt: 'asc' },
-        },
+  for (const option of pricingOptions) {
+    await tx.productPricingOption.create({
+      data: {
+        productId,
+        label: option.label,
+        unit: option.unit,
+        price: option.price,
+        quantityStep: option.quantityStep,
+        minQuantity: option.minQuantity,
+        maxQuantity: option.maxQuantity,
+        inventoryFactor: option.inventoryFactor,
+        sortOrder: option.sortOrder,
+        isDefault: option.isDefault,
+        offers:
+          option.offers.length > 0
+            ? {
+                create: option.offers.map((offer) => ({
+                  minQuantity: offer.minQuantity,
+                  discountType: offer.discountType,
+                  discountValue: offer.discountValue,
+                  isActive: offer.isActive,
+                  startsAt: offer.startsAt,
+                  endsAt: offer.endsAt,
+                })),
+              }
+            : undefined,
       },
     });
   }
+};
 
-  return product;
+export const createProduct = async (data) => {
+  const existingProduct = data.name
+    ? await prisma.product.findUnique({
+        where: { name: data.name.trim() },
+        include: productInclude,
+      })
+    : null;
+  const payload = buildProductPayload(data, existingProduct);
+  const { pricingOptions, ...productFields } = payload;
+
+  const product = await prisma.$transaction(async (tx) => {
+    const upsertedProduct = await tx.product.upsert({
+      where: { name: payload.name },
+      update: productFields,
+      create: productFields,
+    });
+
+    await savePricingOptions(tx, upsertedProduct.id, pricingOptions);
+
+    return tx.product.findUnique({
+      where: { id: upsertedProduct.id },
+      include: productInclude,
+    });
+  });
+
+  return serializeProduct(product);
 };
 
 export const getProducts = async () => {
-  return prisma.product.findMany({
-    include: {
-      category: true,
-      images: {
-        orderBy: { createdAt: 'asc' },
-      },
-    },
+  const products = await prisma.product.findMany({
+    include: productInclude,
   });
+
+  return products.map(serializeProduct);
 };
 
 export const getProductById = async (id) => {
-  return prisma.product.findUnique({
+  const product = await prisma.product.findUnique({
     where: { id },
-    include: { 
-      category: true,
-      images: {
-        orderBy: { createdAt: 'asc' },
-      },
-    },
+    include: productInclude,
   });
+
+  return serializeProduct(product);
 };
 
 export const updateProduct = async (id, data) => {
-  const updateData = { ...data };
-  if (data.stock !== undefined) {
-    updateData.stock = toNonNegativeInt(data.stock);
-  }
-  if (data.maxStock !== undefined) {
-    updateData.maxStock = toNonNegativeInt(data.maxStock);
-  }
-  if (updateData.maxStock && updateData.stock) {
-    updateData.maxStock = Math.max(updateData.maxStock, updateData.stock);
-  }
-
-  // Handle images separately
-  const { images, ...productFields } = updateData;
-
-  const product = await prisma.product.update({
+  const existingProduct = await prisma.product.findUnique({
     where: { id },
-    data: productFields,
-    include: { 
-      category: true,
-      images: true,
-    },
+    include: productInclude,
   });
 
-  // Handle images if provided
-  if (images !== undefined) {
-    if (Array.isArray(images) && images.length > 0) {
-      // Delete existing images
-      await prisma.productImage.deleteMany({
-        where: { productId: id },
-      });
-
-      // Create new images
-      const imageData = images.map(imageUrl => ({
-        productId: id,
-        imageUrl: imageUrl.trim(),
-      }));
-
-      await prisma.productImage.createMany({
-        data: imageData,
-      });
-    } else if (images === null || images.length === 0) {
-      // Delete all images if explicitly set to empty
-      await prisma.productImage.deleteMany({
-        where: { productId: id },
-      });
-    }
+  if (!existingProduct) {
+    throw new Error("Product not found");
   }
 
-  // Return updated product with images
-  return prisma.product.findUnique({
-    where: { id },
-    include: { 
-      category: true,
-      images: {
-        orderBy: { createdAt: 'asc' },
-      },
+  const payload = buildProductPayload(
+    {
+      ...existingProduct,
+      ...data,
+      pricingOptions: data.pricingOptions ?? existingProduct.pricingOptions,
     },
+    existingProduct,
+  );
+  const { pricingOptions, ...productFields } = payload;
+
+  const product = await prisma.$transaction(async (tx) => {
+    await tx.product.update({
+      where: { id },
+      data: productFields,
+    });
+
+    await savePricingOptions(tx, id, pricingOptions);
+
+    return tx.product.findUnique({
+      where: { id },
+      include: productInclude,
+    });
   });
+
+  return serializeProduct(product);
 };
 
 export const deleteProduct = async (id) => {
-  // Check if product exists
   const product = await prisma.product.findUnique({
     where: { id },
     include: {
@@ -188,26 +202,26 @@ export const deleteProduct = async (id) => {
     throw new Error("Product not found");
   }
 
-  // Check if product is referenced in any orders
   if (product.orderItems.length > 0) {
     throw new Error(
       `Cannot delete product. It is referenced in ${product.orderItems.length} order(s). Archive or mark as inactive instead.`,
     );
   }
 
-  // Delete in transaction to ensure consistency
   return prisma.$transaction(async (tx) => {
-    // Delete cart items referencing this product
     await tx.cartItem.deleteMany({
       where: { productId: id },
     });
-
-    // Delete product images
+    await tx.productOfferRule.deleteMany({
+      where: { pricingOption: { productId: id } },
+    });
+    await tx.productPricingOption.deleteMany({
+      where: { productId: id },
+    });
     await tx.productImage.deleteMany({
       where: { productId: id },
     });
 
-    // Delete the product
     return tx.product.delete({
       where: { id },
     });
@@ -215,7 +229,6 @@ export const deleteProduct = async (id) => {
 };
 
 export const addProductImages = async (productId, imageData) => {
-  // Verify product exists
   const product = await prisma.product.findUnique({
     where: { id: productId },
   });
@@ -224,14 +237,12 @@ export const addProductImages = async (productId, imageData) => {
     throw new Error("Product not found");
   }
 
-  // Create new images
-  const createdImages = await prisma.productImage.createMany({
+  await prisma.productImage.createMany({
     data: imageData,
   });
 
-  // Return the created images
   return prisma.productImage.findMany({
     where: { productId },
-    orderBy: { createdAt: 'asc' },
+    orderBy: { createdAt: "asc" },
   });
 };

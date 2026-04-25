@@ -6,23 +6,35 @@ import type {
   ApiDeliveryArea,
   CreateAddressPayload,
 } from "../lib/api";
+import { formatQuantity } from "../lib/api";
 
 interface CartItem {
   id: string;
   name: string;
-  price: number;
+  optionLabel: string;
   unit: string;
+  quantityStep: number;
   image: string;
   quantity: number;
   farmer: string;
+  pricing: {
+    subtotal: number;
+    discount: number;
+    total: number;
+    appliedOffer?: {
+      minQuantity: number;
+      discountType: "PERCENTAGE" | "FLAT";
+      discountValue: number;
+    } | null;
+  };
 }
 
 interface CartOverlayProps {
   isOpen: boolean;
   onClose: () => void;
   cartItems: CartItem[];
-  onUpdateQuantity: (productId: string, change: number) => void;
-  onRemoveItem: (productId: string) => void;
+  onUpdateQuantity: (cartItemId: string, nextQuantity: number) => void;
+  onRemoveItem: (cartItemId: string) => void;
   totalPrice: number;
   isAuthenticated: boolean;
   selectedDeliveryArea: ApiDeliveryArea | null;
@@ -60,7 +72,7 @@ export function CartOverlay({
   message,
   onCheckout,
 }: CartOverlayProps) {
-  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const totalItems = cartItems.length;
   const isCheckoutDisabled =
     isCartLoading ||
     isAddressSubmitting ||
@@ -156,13 +168,13 @@ export function CartOverlay({
                           {item.name}
                         </h4>
                         <p className="text-xs text-[#1B4332]/60 mb-2">
-                          by {item.farmer}
+                          {item.optionLabel} by {item.farmer}
                         </p>
                         <div className="flex items-center justify-between">
                           <span className="text-[#1B4332]">
-                            ₹{item.price}{" "}
+                            Rs {item.pricing.total.toFixed(2)}{" "}
                             <span className="text-sm text-[#1B4332]/60">
-                              /{item.unit}
+                              for {formatQuantity(item.quantity)} {item.unit}
                             </span>
                           </span>
 
@@ -171,19 +183,33 @@ export function CartOverlay({
                             <motion.button
                               whileHover={{ scale: 1.2 }}
                               whileTap={{ scale: 0.9 }}
-                              onClick={() => onUpdateQuantity(item.id, -1)}
+                              onClick={() =>
+                                onUpdateQuantity(
+                                  item.id,
+                                  Number(
+                                    (item.quantity - item.quantityStep).toFixed(3),
+                                  ),
+                                )
+                              }
                               disabled={isCartLoading}
                               className="w-6 h-6 flex items-center justify-center"
                             >
                               <Minus className="w-3 h-3" />
                             </motion.button>
-                            <span className="w-6 text-center text-sm">
-                              {item.quantity}
+                            <span className="min-w-[3rem] text-center text-sm">
+                              {formatQuantity(item.quantity)}
                             </span>
                             <motion.button
                               whileHover={{ scale: 1.2 }}
                               whileTap={{ scale: 0.9 }}
-                              onClick={() => onUpdateQuantity(item.id, 1)}
+                              onClick={() =>
+                                onUpdateQuantity(
+                                  item.id,
+                                  Number(
+                                    (item.quantity + item.quantityStep).toFixed(3),
+                                  ),
+                                )
+                              }
                               disabled={isCartLoading}
                               className="w-6 h-6 flex items-center justify-center"
                             >
@@ -191,6 +217,11 @@ export function CartOverlay({
                             </motion.button>
                           </div>
                         </div>
+                        {item.pricing.discount > 0 && (
+                          <p className="mt-2 text-xs text-[#2D6A4F]">
+                            Saved Rs {item.pricing.discount.toFixed(2)} on this line
+                          </p>
+                        )}
                       </div>
 
                       {/* Delete Button */}
@@ -235,7 +266,7 @@ export function CartOverlay({
                   <div>
                     <p className="text-sm text-[#1B4332]/60">Total Amount</p>
                     <p className="text-2xl font-serif text-[#1B4332]">
-                      ₹{totalPrice}
+                      Rs {totalPrice.toFixed(2)}
                     </p>
                   </div>
                 </div>

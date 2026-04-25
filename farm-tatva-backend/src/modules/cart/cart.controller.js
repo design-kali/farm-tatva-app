@@ -7,9 +7,8 @@ import {
 
 export const addItem = async (req, res) => {
   try {
-    const { productId, quantity } = req.body;
-    await addToCart(req.user.id, productId, quantity);
-    const cart = await getCart(req.user.id);
+    const { pricingOptionId, quantity } = req.body;
+    const cart = await addToCart(req.user.id, pricingOptionId, quantity);
 
     res.json(cart);
   } catch (err) {
@@ -24,9 +23,8 @@ export const getUserCart = async (req, res) => {
 
 export const updateItem = async (req, res) => {
   try {
-    const { productId, quantity } = req.body;
-    await updateCartItem(req.user.id, productId, quantity);
-    const cart = await getCart(req.user.id);
+    const { cartItemId, quantity } = req.body;
+    const cart = await updateCartItem(req.user.id, cartItemId, quantity);
 
     res.json(cart);
   } catch (err) {
@@ -36,9 +34,8 @@ export const updateItem = async (req, res) => {
 
 export const removeItem = async (req, res) => {
   try {
-    const { productId } = req.params;
-    await removeFromCart(req.user.id, productId);
-    const cart = await getCart(req.user.id);
+    const { cartItemId } = req.params;
+    const cart = await removeFromCart(req.user.id, cartItemId);
 
     res.json(cart);
   } catch (err) {

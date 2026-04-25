@@ -16,7 +16,7 @@ model User {
   addresses Address[]
   createdAt DateTime @default(now())
   cart      Cart?
-  orders Order[]
+  orders    Order[]
 }
 
 enum Role {
@@ -48,18 +48,60 @@ model DeliveryArea {
 }
 
 model Product {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  description String?
-  price       Float
-  stock       Int      @default(0)
-  maxStock    Int      @default(0)
-  createdAt   DateTime @default(now())
-  categoryId String
-  category    Category      @relation(fields: [categoryId], references: [id])
-  images      ProductImage[]
-  cartItems   CartItem[]
-  orderItems  OrderItem[]
+  id             String                @id @default(uuid())
+  name           String                @unique
+  description    String?
+  stock          Decimal               @default(0) @db.Decimal(10, 3)
+  maxStock       Decimal               @default(0) @db.Decimal(10, 3)
+  inventoryUnit  String                @default("kg")
+  createdAt      DateTime              @default(now())
+  categoryId     String
+  category       Category              @relation(fields: [categoryId], references: [id])
+  images         ProductImage[]
+  cartItems      CartItem[]
+  orderItems     OrderItem[]
+  pricingOptions ProductPricingOption[]
+}
+
+model ProductPricingOption {
+  id                String             @id @default(uuid())
+  productId         String
+  product           Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  label             String
+  unit              String
+  price             Decimal            @db.Decimal(10, 2)
+  quantityStep      Decimal            @default(1) @db.Decimal(10, 3)
+  minQuantity       Decimal            @default(1) @db.Decimal(10, 3)
+  maxQuantity       Decimal?           @db.Decimal(10, 3)
+  inventoryFactor   Decimal            @default(1) @db.Decimal(10, 3)
+  sortOrder         Int                @default(0)
+  isDefault         Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  offers            ProductOfferRule[]
+  cartItems         CartItem[]
+  orderItems        OrderItem[]
+
+  @@index([productId, sortOrder])
+}
+
+model ProductOfferRule {
+  id               String               @id @default(uuid())
+  pricingOptionId  String
+  pricingOption    ProductPricingOption @relation(fields: [pricingOptionId], references: [id], onDelete: Cascade)
+  minQuantity      Decimal              @db.Decimal(10, 3)
+  discountType     DiscountType
+  discountValue    Decimal              @db.Decimal(10, 2)
+  isActive         Boolean              @default(true)
+  startsAt         DateTime?
+  endsAt           DateTime?
+  createdAt        DateTime             @default(now())
+
+  @@index([pricingOptionId, isActive, minQuantity])
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FLAT
 }
 
 model ProductImage {
@@ -82,15 +124,18 @@ model Cart {
 }
 
 model CartItem {
-  id        String @id @default(uuid())
-  cartId    String
-  productId String
-  quantity  Int    @default(1)
+  id               String               @id @default(uuid())
+  cartId           String
+  productId        String
+  pricingOptionId  String
+  quantity         Decimal              @default(1) @db.Decimal(10, 3)
 
-  cart    Cart    @relation(fields: [cartId], references: [id])
-  product Product @relation(fields: [productId], references: [id])
+  cart           Cart                 @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product        Product              @relation(fields: [productId], references: [id])
+  pricingOption  ProductPricingOption @relation(fields: [pricingOptionId], references: [id])
 
-  @@unique([cartId, productId])
+  @@unique([cartId, pricingOptionId])
+  @@index([productId])
 }
 
 model Order {
@@ -98,33 +143,42 @@ model Order {
   userId     String
   user       User          @relation(fields: [userId], references: [id])
 
-  addressId String?
-  address    Address? @relation(fields: [addressId], references: [id])
+  addressId  String?
+  address    Address?      @relation(fields: [addressId], references: [id])
 
   status     OrderStatus   @default(PENDING)
-  total      Float
+  subtotal   Decimal       @default(0) @db.Decimal(10, 2)
+  discount   Decimal       @default(0) @db.Decimal(10, 2)
+  total      Decimal       @default(0) @db.Decimal(10, 2)
   createdAt  DateTime      @default(now())
   items      OrderItem[]
 }
 
 model OrderItem {
-  id         String   @id @default(uuid())
-  orderId    String
-  productId  String
-  quantity   Int
-  price      Float
+  id               String               @id @default(uuid())
+  orderId          String
+  productId        String
+  pricingOptionId  String?
+  quantity         Decimal              @db.Decimal(10, 3)
+  unit             String
+  optionLabel      String
+  unitPrice        Decimal              @db.Decimal(10, 2)
+  subtotal         Decimal              @db.Decimal(10, 2)
+  discount         Decimal              @default(0) @db.Decimal(10, 2)
+  total            Decimal              @db.Decimal(10, 2)
 
-  order      Order    @relation(fields: [orderId], references: [id])
-  product    Product  @relation(fields: [productId], references: [id])
+  order          Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product        Product              @relation(fields: [productId], references: [id])
+  pricingOption  ProductPricingOption? @relation(fields: [pricingOptionId], references: [id], onDelete: SetNull)
 }
 
 enum OrderStatus {
-  PENDING            // Order placed, awaiting processing
-  CONFIRMED          // Admin confirmed the order
-  PACKED             // Order packed and ready
-  OUT_FOR_DELIVERY   // With delivery agent
-  DELIVERED          // Successfully delivered
-  CANCELLED          // Cancelled before delivery
+  PENDING
+  CONFIRMED
+  PACKED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
 }
 
 model Address {
@@ -134,7 +188,7 @@ model Address {
   deliveryAreaId String?
   deliveryArea   DeliveryArea? @relation(fields: [deliveryAreaId], references: [id])
 
-  name        String @default("Home") // e.g. Home, Office
+  name        String @default("Home")
   street      String
   city        String
   state       String

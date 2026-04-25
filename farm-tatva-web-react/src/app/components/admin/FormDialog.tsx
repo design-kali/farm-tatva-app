@@ -8,6 +8,7 @@ import {
   DialogFooter,
 } from "@/app/components/ui/dialog";
 import { Button } from "@/app/components/ui/button";
+import { cn } from "@/app/components/ui/utils";
 
 interface FormDialogProps {
   open: boolean;
@@ -20,6 +21,9 @@ interface FormDialogProps {
   submitLabel?: string;
   onCancel?: () => void;
   cancelLabel?: string;
+  contentClassName?: string;
+  bodyClassName?: string;
+  footerClassName?: string;
 }
 
 export function FormDialog({
@@ -33,6 +37,9 @@ export function FormDialog({
   submitLabel = "Save",
   onCancel,
   cancelLabel = "Cancel",
+  contentClassName,
+  bodyClassName,
+  footerClassName,
 }: FormDialogProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,14 +48,16 @@ export function FormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
+      <DialogContent className={contentClassName}>
+        <form onSubmit={handleSubmit} className="flex max-h-[inherit] flex-col">
+          <DialogHeader className="px-6 pt-6">
             <DialogTitle>{title}</DialogTitle>
             {description && <DialogDescription>{description}</DialogDescription>}
           </DialogHeader>
-          {children}
-          <DialogFooter>
+          <div className={cn("mt-4 min-h-0 flex-1 overflow-y-auto pr-1", bodyClassName)}>
+            {children}
+          </div>
+          <DialogFooter className={cn("mt-4", footerClassName)}>
             <Button
               type="button"
               variant="outline"

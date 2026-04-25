@@ -67,7 +67,7 @@ export function FloatingCartBar({ totalItems, totalPrice, lastAddedItem, onViewC
                   animate={{ scale: 1 }}
                   className="text-xl font-serif text-[#1B4332]"
                 >
-                  ₹{totalPrice}
+                  Rs {totalPrice.toFixed(2)}
                 </motion.p>
               </div>
               <div className="flex items-center gap-1 text-[#1B4332]">

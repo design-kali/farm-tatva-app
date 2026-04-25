@@ -55,17 +55,24 @@ export interface ApiProduct {
   name: string;
   description?: string | null;
   price: number;
+  unit?: string;
   stock: number;
   maxStock: number;
+  inventoryUnit?: string;
   categoryId: string;
   category?: ApiCategory;
   images?: ApiProductImage[];
+  pricingOptions?: ApiPricingOption[];
+  defaultPricingOption?: ApiPricingOption | null;
 }
 
 export interface ApiCartItem {
   id: string;
   quantity: number;
   productId: string;
+  pricingOptionId: string;
+  pricingOption: ApiPricingOption;
+  pricing: ApiPricingBreakdown;
   product: ApiProduct;
 }
 
@@ -73,6 +80,9 @@ export interface ApiCart {
   id: string;
   userId: string;
   items: ApiCartItem[];
+  subtotal?: number;
+  discount?: number;
+  total?: number;
   createdAt: string;
 }
 
@@ -113,7 +123,12 @@ export interface CreateAddressPayload {
 export interface ApiOrderItem {
   id: string;
   quantity: number;
-  price: number;
+  unit: string;
+  optionLabel: string;
+  unitPrice: number;
+  subtotal: number;
+  discount: number;
+  total: number;
   product: ApiProduct;
 }
 
@@ -124,9 +139,47 @@ export interface ApiOrder {
   addressId?: string | null;
   address?: ApiAddress | null;
   status: string;
+  subtotal?: number;
+  discount?: number;
   total: number;
   items?: ApiOrderItem[];
   createdAt: string;
+}
+
+export interface ApiOfferRule {
+  id: string;
+  minQuantity: number;
+  discountType: "PERCENTAGE" | "FLAT";
+  discountValue: number;
+  isActive: boolean;
+  startsAt?: string | null;
+  endsAt?: string | null;
+}
+
+export interface ApiPricingOption {
+  id: string;
+  label: string;
+  unit: string;
+  price: number;
+  quantityStep: number;
+  minQuantity: number;
+  maxQuantity?: number | null;
+  inventoryFactor: number;
+  sortOrder: number;
+  isDefault: boolean;
+  offers: ApiOfferRule[];
+}
+
+export interface ApiPricingBreakdown {
+  subtotal: number;
+  discount: number;
+  total: number;
+  appliedOffer?: {
+    id?: string;
+    minQuantity: number;
+    discountType: "PERCENTAGE" | "FLAT";
+    discountValue: number;
+  } | null;
 }
 
 export interface ApiOrderStatusMeta {
@@ -148,8 +201,6 @@ export interface AuthResponse {
 export interface ProductCardModel {
   id: string;
   name: string;
-  price: number;
-  unit: string;
   images: string[];
   stockLeafCount: number;
   stockStatusLabel: string;
@@ -158,7 +209,10 @@ export interface ProductCardModel {
   description: string;
   stock: number;
   maxStock: number;
+  inventoryUnit: string;
   categoryName: string;
+  pricingOptions: ApiPricingOption[];
+  defaultPricingOption: ApiPricingOption;
 }
 
 export interface CategoryCardModel {
@@ -170,15 +224,19 @@ export interface CategoryCardModel {
 
 export interface CartItemModel {
   id: string;
+  productId: string;
+  pricingOptionId: string;
   name: string;
-  price: number;
+  optionLabel: string;
   unit: string;
+  quantityStep: number;
   image: string;
   quantity: number;
   farmer: string;
   stock: number;
   maxStock: number;
   categoryName: string;
+  pricing: ApiPricingBreakdown;
 }
 
 const slugToNumber = (value: string) => {
@@ -189,22 +247,76 @@ const pickImage = (seed: string, images: string[]) => {
   return images[slugToNumber(seed) % images.length];
 };
 
-const inferUnit = (productName: string) => {
-  const loweredName = productName.toLowerCase();
+export const formatQuantity = (value: number) => {
+  return Number.isInteger(value) ? String(value) : value.toFixed(3).replace(/\.?0+$/, "");
+};
 
-  if (
-    loweredName.includes("basket") ||
-    loweredName.includes("combo") ||
-    loweredName.includes("mix")
-  ) {
-    return "basket";
-  }
+export const calculatePricingBreakdown = (
+  pricingOption: ApiPricingOption,
+  quantity: number,
+): ApiPricingBreakdown => {
+  const subtotal = Number((pricingOption.price * quantity).toFixed(2));
+  const applicableOffers = pricingOption.offers.filter((offer) => {
+    if (!offer.isActive || quantity < offer.minQuantity) {
+      return false;
+    }
 
-  if (loweredName.includes("leaf") || loweredName.includes("greens")) {
-    return "bunch";
-  }
+    const now = Date.now();
+    if (offer.startsAt && new Date(offer.startsAt).getTime() > now) {
+      return false;
+    }
+    if (offer.endsAt && new Date(offer.endsAt).getTime() < now) {
+      return false;
+    }
 
-  return "kg";
+    return true;
+  });
+
+  const appliedOffer =
+    applicableOffers.length === 0
+      ? null
+      : applicableOffers.reduce((bestOffer, currentOffer) => {
+          const bestDiscount =
+            !bestOffer
+              ? 0
+              : bestOffer.discountType === "FLAT"
+                ? Math.min(subtotal, quantity * bestOffer.discountValue)
+                : (subtotal * bestOffer.discountValue) / 100;
+          const currentDiscount =
+            currentOffer.discountType === "FLAT"
+              ? Math.min(subtotal, quantity * currentOffer.discountValue)
+              : (subtotal * currentOffer.discountValue) / 100;
+
+          if (!bestOffer || currentDiscount > bestDiscount) {
+            return currentOffer;
+          }
+
+          return bestOffer;
+        }, null as ApiOfferRule | null);
+
+  const discount = appliedOffer
+    ? Number(
+        (
+          appliedOffer.discountType === "FLAT"
+            ? Math.min(subtotal, quantity * appliedOffer.discountValue)
+            : (subtotal * appliedOffer.discountValue) / 100
+        ).toFixed(2),
+      )
+    : 0;
+
+  return {
+    subtotal,
+    discount,
+    total: Number((subtotal - discount).toFixed(2)),
+    appliedOffer: appliedOffer
+      ? {
+          id: appliedOffer.id,
+          minQuantity: appliedOffer.minQuantity,
+          discountType: appliedOffer.discountType,
+          discountValue: appliedOffer.discountValue,
+        }
+      : null,
+  };
 };
 
 const toErrorMessage = (payload: unknown) => {
@@ -305,26 +417,26 @@ export const farmTatvaApi = {
       },
       token,
     ),
-  addToCart: (token: string, productId: string, quantity: number) =>
+  addToCart: (token: string, pricingOptionId: string, quantity: number) =>
     request<ApiCart>(
       "/cart",
       {
         method: "POST",
-        body: JSON.stringify({ productId, quantity }),
+        body: JSON.stringify({ pricingOptionId, quantity }),
       },
       token,
     ),
-  updateCartItem: (token: string, productId: string, quantity: number) =>
+  updateCartItem: (token: string, cartItemId: string, quantity: number) =>
     request<ApiCart>(
       "/cart",
       {
         method: "PUT",
-        body: JSON.stringify({ productId, quantity }),
+        body: JSON.stringify({ cartItemId, quantity }),
       },
       token,
     ),
-  removeCartItem: (token: string, productId: string) =>
-    request<ApiCart>(`/cart/${productId}`, { method: "DELETE" }, token),
+  removeCartItem: (token: string, cartItemId: string) =>
+    request<ApiCart>(`/cart/${cartItemId}`, { method: "DELETE" }, token),
   placeOrder: (token: string, addressId: string) =>
     request<ApiOrder>(
       "/orders",
@@ -337,7 +449,7 @@ export const farmTatvaApi = {
   // Admin CRUD: Products
   createProduct: (
     token: string,
-    payload: Omit<ApiProduct, "id" | "createdAt">,
+    payload: Record<string, unknown>,
   ) =>
     request<ApiProduct>(
       "/products",
@@ -347,7 +459,7 @@ export const farmTatvaApi = {
       },
       token,
     ),
-  updateProduct: (token: string, id: string, payload: Partial<ApiProduct>) =>
+  updateProduct: (token: string, id: string, payload: Record<string, unknown>) =>
     request<ApiProduct>(
       `/products/${id}`,
       {
@@ -451,6 +563,30 @@ export const mapProductToCard = (
   index: number,
 ): ProductCardModel => {
   const categoryName = product.category?.name || "Fresh Produce";
+  const pricingOptions =
+    product.pricingOptions && product.pricingOptions.length > 0
+      ? [...product.pricingOptions].sort(
+          (left, right) => left.sortOrder - right.sortOrder,
+        )
+      : [
+          {
+            id: `${product.id}-default`,
+            label: `Per ${product.unit || "unit"}`,
+            unit: product.unit || "unit",
+            price: product.price,
+            quantityStep: 1,
+            minQuantity: 1,
+            maxQuantity: null,
+            inventoryFactor: 1,
+            sortOrder: 0,
+            isDefault: true,
+            offers: [],
+          },
+        ];
+  const defaultPricingOption =
+    product.defaultPricingOption ||
+    pricingOptions.find((option) => option.isDefault) ||
+    pricingOptions[0];
   const farmerName =
     FARMER_NAMES[
       slugToNumber(product.id || `${product.name}-${index}`) %
@@ -465,14 +601,15 @@ export const mapProductToCard = (
   return {
     id: product.id,
     name: product.name,
-    price: product.price,
-    unit: inferUnit(product.name),
     images:
       product.images?.length > 0
         ? product.images.map((img) => img.imageUrl)
         : [pickImage(product.name, PRODUCT_IMAGES)],
     stockLeafCount,
-    stockStatusLabel: product.stock > 0 ? `${product.stock} left` : "Sold out",
+    stockStatusLabel:
+      product.stock > 0
+        ? `${formatQuantity(product.stock)} ${product.inventoryUnit || defaultPricingOption.unit} left`
+        : "Sold out",
     farmer: farmerName,
     deliveryTime: product.stock > 0 ? "Tomorrow morning" : "Restocking",
     description:
@@ -480,7 +617,10 @@ export const mapProductToCard = (
       `Fresh ${categoryName.toLowerCase()} from FarmTatva.`,
     stock: product.stock,
     maxStock,
+    inventoryUnit: product.inventoryUnit || defaultPricingOption.unit,
     categoryName,
+    pricingOptions,
+    defaultPricingOption,
   };
 };
 
@@ -489,16 +629,20 @@ export const mapCartToItems = (cart: ApiCart | null | undefined) => {
     const mappedProduct = mapProductToCard(item.product, index);
 
     return {
-      id: item.productId,
+      id: item.id,
+      productId: item.productId,
+      pricingOptionId: item.pricingOptionId,
       name: mappedProduct.name,
-      price: mappedProduct.price,
-      unit: mappedProduct.unit,
+      optionLabel: item.pricingOption.label,
+      unit: item.pricingOption.unit,
+      quantityStep: item.pricingOption.quantityStep,
       image: mappedProduct.images[0] || "",
       quantity: item.quantity,
       farmer: mappedProduct.farmer,
       stock: mappedProduct.stock,
       maxStock: mappedProduct.maxStock,
       categoryName: mappedProduct.categoryName,
+      pricing: item.pricing,
     };
   });
 };

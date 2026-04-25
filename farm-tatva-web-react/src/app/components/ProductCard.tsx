@@ -1,14 +1,29 @@
 import { motion, AnimatePresence } from "motion/react";
 import { Leaf, Plus, Minus, Clock } from "lucide-react";
-import { useState, useRef } from "react";
-import type { ProductCardModel } from "../lib/api";
+import { useMemo, useRef, useState } from "react";
+import {
+  calculatePricingBreakdown,
+  formatQuantity,
+  type ApiPricingOption,
+  type ProductCardModel,
+} from "../lib/api";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 
 interface ProductCardProps {
   product: ProductCardModel;
   index: number;
-  onAddToCart: (product: ProductCardModel) => void;
-  onUpdateQuantity: (productId: string, change: number) => void;
-  quantity: number;
+  onAddToCart: (product: ProductCardModel, pricingOption: ApiPricingOption) => void;
+  onUpdateQuantity: (cartItemId: string, nextQuantity: number) => void;
+  getCartLine: (
+    productId: string,
+    pricingOptionId: string,
+  ) => { id: string; quantity: number } | null;
   cartIconRef: React.RefObject<HTMLDivElement>;
   disabled?: boolean;
 }
@@ -18,18 +33,26 @@ export function ProductCard({
   index,
   onAddToCart,
   onUpdateQuantity,
-  quantity,
+  getCartLine,
   cartIconRef,
   disabled = false,
 }: ProductCardProps) {
   const [flyingLeaf, setFlyingLeaf] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [selectedPricingOptionId, setSelectedPricingOptionId] = useState(
+    product.defaultPricingOption.id,
+  );
   const buttonRef = useRef<HTMLDivElement>(null);
   const isSoldOut = product.stock <= 0;
-  const bulkOrderMessage =
-    product.unit === "basket"
-      ? "Order 2+ baskets for better wholesale pricing"
-      : `Order 3+ ${product.unit} for better wholesale pricing`;
+  const selectedPricingOption = useMemo(
+    () =>
+      product.pricingOptions.find((option) => option.id === selectedPricingOptionId) ||
+      product.defaultPricingOption,
+    [product.defaultPricingOption, product.pricingOptions, selectedPricingOptionId],
+  );
+  const cartLine = getCartLine(product.id, selectedPricingOption.id);
+  const quantity = cartLine?.quantity || 0;
+  const pricing = calculatePricingBreakdown(selectedPricingOption, Math.max(quantity, selectedPricingOption.minQuantity));
 
   const currentImage =
     product.images[currentImageIndex] || product.images[0] || "";
@@ -40,9 +63,19 @@ export function ProductCard({
       return;
     }
 
-    onAddToCart(product);
+    onAddToCart(product, selectedPricingOption);
     setFlyingLeaf(true);
     setTimeout(() => setFlyingLeaf(false), 1000);
+  };
+
+  const handleDecrease = () => {
+    const nextQuantity = Number(
+      (quantity - selectedPricingOption.quantityStep).toFixed(3),
+    );
+    onUpdateQuantity(
+      cartLine?.id || `${product.id}:${selectedPricingOption.id}`,
+      nextQuantity,
+    );
   };
 
   const getLeafPosition = () => {
@@ -59,7 +92,7 @@ export function ProductCard({
 
   const multiLineStyle = {
     display: "-webkit-box",
-    WebkitLineClamp: 2, // Change this to the number of lines you want
+    WebkitLineClamp: 2,
     WebkitBoxOrient: "vertical",
     overflow: "hidden",
   };
@@ -73,7 +106,6 @@ export function ProductCard({
       whileHover={{ y: -4 }}
       className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300"
     >
-      {/* Product Image Carousel */}
       <div className="relative aspect-square overflow-hidden bg-[#F8F4E1]">
         <AnimatePresence mode="wait">
           <motion.img
@@ -88,7 +120,6 @@ export function ProductCard({
           />
         </AnimatePresence>
 
-        {/* Image Navigation Dots */}
         {hasMultipleImages && (
           <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 flex space-x-2">
             {product.images.map((_, idx) => (
@@ -103,7 +134,6 @@ export function ProductCard({
           </div>
         )}
 
-        {/* Image Navigation Arrows */}
         {hasMultipleImages && (
           <>
             <button
@@ -129,50 +159,68 @@ export function ProductCard({
           </>
         )}
 
-        {/* Market Fresh Today Label */}
-        {/* <div className="absolute top-3 left-3 bg-[#1B4332] text-white text-xs px-3 py-1.5 rounded-lg shadow-md">
-          Market Fresh Today
-        </div> */}
-
-        {/* Stock Availability Badge */}
-        <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm rounded-2xl px-3 py-1 shadow-md min-w-[3.5rem]">
-          {/* <div className="flex items-center justify-end gap-1">
-            {[...Array(5)].map((_, i) => (
-              <Leaf
-                key={i}
-                className={`w-3 h-3 ${
-                  i < product.stockLeafCount
-                    ? "text-[#1B4332] fill-[#1B4332]"
-                    : "text-[#1B4332]/20 fill-[#1B4332]/20"
-                }`}
-              />
-            ))}
-          </div> */}
+        <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm rounded-2xl px-3 py-1 shadow-md min-w-[4.5rem]">
           <p className="text-[10px] text-right text-[#1B4332]/70">
             {product.stockStatusLabel}
           </p>
         </div>
 
-        {/* Delivery Time */}
         <div className="absolute bottom-3 left-3 bg-[#1B4332]/90 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1">
           <Clock className="w-3 h-3" />
           {product.deliveryTime}
         </div>
       </div>
 
-      {/* Product Info */}
       <div className="p-4">
         <h4 className="text-[#1B4332] mb-1 line-clamp-1">{product.name}</h4>
         <p className="text-xs text-[#1B4332]/60 mb-3" style={multiLineStyle}>
           {product.description}
         </p>
 
+        <div className="mb-3">
+          <label className="mb-1 block text-xs uppercase tracking-[0.15em] text-[#1B4332]/55">
+            Unit
+          </label>
+          <Select
+            value={selectedPricingOption.id}
+            onValueChange={setSelectedPricingOptionId}
+          >
+            <SelectTrigger className="w-full rounded-2xl border-[#1B4332]/15 bg-[#F8F4E1] text-sm text-[#1B4332] focus-visible:border-[#1B4332]">
+              <SelectValue placeholder="Select unit" />
+            </SelectTrigger>
+            <SelectContent>
+              {product.pricingOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label} - Rs {option.price}/{option.unit}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="flex flex-col gap-3 mb-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <div className="flex items-baseline gap-1 flex-wrap">
-              <span className="text-[#1B4332] text-lg">₹{product.price}</span>
-              <span className="text-[#1B4332]/60 text-sm">/{product.unit}</span>
+              <span className="text-[#1B4332] text-lg">
+                Rs {selectedPricingOption.price}
+              </span>
+              <span className="text-[#1B4332]/60 text-sm">
+                /{selectedPricingOption.unit}
+              </span>
             </div>
+            <p className="text-xs text-[#1B4332]/55 mt-1">
+              Buy from {formatQuantity(selectedPricingOption.minQuantity)} in steps of{" "}
+              {formatQuantity(selectedPricingOption.quantityStep)}
+            </p>
+            {pricing.appliedOffer && (
+              <p className="mt-1 text-xs text-[#2D6A4F]">
+                Bulk offer:{" "}
+                {pricing.appliedOffer.discountType === "PERCENTAGE"
+                  ? `${pricing.appliedOffer.discountValue}% off`
+                  : `Rs ${pricing.appliedOffer.discountValue} off per ${selectedPricingOption.unit}`}{" "}
+                from {formatQuantity(pricing.appliedOffer.minQuantity)} {selectedPricingOption.unit}
+              </p>
+            )}
           </div>
 
           <div
@@ -209,7 +257,7 @@ export function ProductCard({
                   <motion.button
                     whileHover={{ scale: 1.2 }}
                     whileTap={{ scale: 0.9 }}
-                    onClick={() => onUpdateQuantity(product.id, -1)}
+                    onClick={handleDecrease}
                     disabled={disabled}
                     className="w-6 h-6 flex items-center justify-center"
                   >
@@ -219,9 +267,9 @@ export function ProductCard({
                     key={quantity}
                     initial={{ scale: 1.5 }}
                     animate={{ scale: 1 }}
-                    className="w-6 text-center"
+                    className="min-w-[3rem] text-center text-sm"
                   >
-                    {quantity}
+                    {formatQuantity(quantity)}
                   </motion.span>
                   <motion.button
                     whileHover={{ scale: 1.2 }}
@@ -236,7 +284,6 @@ export function ProductCard({
               )}
             </AnimatePresence>
 
-            {/* Flying Leaf Animation */}
             <AnimatePresence>
               {flyingLeaf && (
                 <motion.div
@@ -257,20 +304,6 @@ export function ProductCard({
             </AnimatePresence>
           </div>
         </div>
-
-        {/* Bulk Incentive */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="text-center mt-2"
-        >
-          <p className="text-xs text-[#1B4332]/60">
-            {isSoldOut
-              ? "Bulk pre-orders open for the next harvest"
-              : bulkOrderMessage}
-          </p>
-        </motion.div>
       </div>
     </motion.div>
   );

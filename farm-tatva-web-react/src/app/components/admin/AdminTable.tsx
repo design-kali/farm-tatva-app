@@ -43,29 +43,29 @@ export function AdminTable({
   return (
     <div className="bg-white rounded-lg border border-gray-200">
       {(title || searchable || onFilter || onExport) && (
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
+        <div className="border-b border-gray-200 px-4 py-4 sm:px-6">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             {title && <h3 className="text-lg font-medium text-gray-900">{title}</h3>}
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               {searchable && (
-                <div className="relative">
+                <div className="relative w-full sm:w-72">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     type="text"
                     placeholder="Search..."
-                    className="pl-10 w-64"
+                    className="w-full pl-10"
                     onChange={(e) => onSearch?.(e.target.value)}
                   />
                 </div>
               )}
               {onFilter && (
-                <Button variant="outline" size="sm" onClick={onFilter}>
+                <Button variant="outline" size="sm" onClick={onFilter} className="w-full sm:w-auto">
                   <Filter className="h-4 w-4 mr-2" />
                   Filter
                 </Button>
               )}
               {onExport && (
-                <Button variant="outline" size="sm" onClick={onExport}>
+                <Button variant="outline" size="sm" onClick={onExport} className="w-full sm:w-auto">
                   <Download className="h-4 w-4 mr-2" />
                   Export
                 </Button>

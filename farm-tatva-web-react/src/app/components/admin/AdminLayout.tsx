@@ -47,7 +47,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen overflow-x-hidden bg-gray-50">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
@@ -109,12 +109,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className="min-w-0 lg:pl-64">
         {/* Top header */}
         <header className="bg-white shadow-sm border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center">
+            <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 py-3">
+              <div className="flex min-w-0 items-center">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -125,20 +125,23 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 </Button>
 
                 {/* Breadcrumb */}
-                <div className="flex items-center space-x-2 text-sm text-gray-500">
-                  <Link to="/admin/dashboard" className="hover:text-gray-700">
+                <div className="flex min-w-0 items-center space-x-2 text-sm text-gray-500">
+                  <Link
+                    to="/admin/dashboard"
+                    className="shrink-0 hover:text-gray-700"
+                  >
                     Admin
                   </Link>
-                  <span>/</span>
-                  <span className="text-gray-900 font-medium">
+                  <span className="shrink-0">/</span>
+                  <span className="truncate text-gray-900 font-medium">
                     {navigation.find(item => isActiveRoute(item.href))?.name || "Dashboard"}
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-center space-x-4">
+              <div className="flex w-full items-center justify-end gap-2 sm:w-auto sm:gap-3">
                 {/* Search */}
-                <div className="hidden md:block">
+                <div className="hidden lg:block">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
@@ -150,17 +153,17 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 </div>
 
                 {/* Notifications */}
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" className="shrink-0">
                   <Bell className="h-5 w-5" />
                 </Button>
 
                 {/* Settings */}
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" className="shrink-0">
                   <Settings className="h-5 w-5" />
                 </Button>
 
                 {/* User menu */}
-                <div className="flex items-center space-x-2">
+                <div className="hidden items-center space-x-2 sm:flex">
                   <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
                     A
                   </div>
@@ -171,7 +174,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                   variant="outline"
                   size="sm"
                   onClick={handleLogout}
-                  className="flex items-center space-x-2"
+                  className="flex shrink-0 items-center space-x-2"
                 >
                   <LogOut className="h-4 w-4" />
                   <span className="hidden sm:inline">Logout</span>
@@ -182,8 +185,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </header>
 
         {/* Page content */}
-        <main className="flex-1">
-          <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <main className="min-w-0 flex-1 overflow-x-hidden">
+          <div className="mx-auto max-w-7xl min-w-0 px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
             {children || <Outlet />}
           </div>
         </main>
