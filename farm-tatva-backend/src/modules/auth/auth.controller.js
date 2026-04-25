@@ -18,7 +18,9 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const user = await loginUser(req.body.email, req.body.password);
+    const identifier =
+      req.body.mobileNumber ?? req.body.email ?? req.body.userId;
+    const user = await loginUser(identifier, req.body.password);
     const token = generateToken(user);
 
     res.json({ user, token });

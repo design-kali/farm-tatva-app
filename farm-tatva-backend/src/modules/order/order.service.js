@@ -3,9 +3,10 @@ import {
   ORDER_STATUSES,
   VALID_ORDER_TRANSITIONS,
 } from "../../utils/order-constants.js";
+import { serializeUser } from "../user/user.utils.js";
 
 export const getOrders = async (userId, isAdmin = false) => {
-  return prisma.order.findMany({
+  const orders = await prisma.order.findMany({
     where: isAdmin ? undefined : { userId },
     orderBy: {
       createdAt: "desc",
@@ -26,6 +27,11 @@ export const getOrders = async (userId, isAdmin = false) => {
       },
     },
   });
+
+  return orders.map((order) => ({
+    ...order,
+    user: serializeUser(order.user),
+  }));
 };
 
 export const getUserOrders = async (userId) => {

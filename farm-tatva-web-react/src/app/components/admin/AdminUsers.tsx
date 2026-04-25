@@ -26,6 +26,10 @@ export default function AdminUsers() {
   });
   const [saving, setSaving] = useState(false);
 
+  const getUserIdentifier = (user: ApiUser) => {
+    return user.mobileNumber ?? user.userId ?? user.email ?? "";
+  };
+
   useEffect(() => {
     const session = readStoredSession();
 
@@ -61,7 +65,7 @@ export default function AdminUsers() {
   const openEditDialog = (user: ApiUser) => {
     setFormData({
       name: user.name,
-      email: user.email,
+      email: getUserIdentifier(user),
       role: user.role,
     });
     setEditingUser(user);
@@ -129,7 +133,7 @@ export default function AdminUsers() {
     () =>
       users.filter((user) =>
         user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchQuery.toLowerCase()),
+        getUserIdentifier(user).toLowerCase().includes(searchQuery.toLowerCase()),
       ),
     [searchQuery, users],
   );
@@ -145,7 +149,7 @@ export default function AdminUsers() {
           </div>
           <div>
             <p className="font-medium text-gray-900">{value}</p>
-            <p className="text-sm text-gray-600">{row.email}</p>
+            <p className="text-sm text-gray-600">{getUserIdentifier(row)}</p>
           </div>
         </div>
       ),
@@ -259,13 +263,13 @@ export default function AdminUsers() {
             />
           </div>
           <div>
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Email / Mobile User ID</Label>
             <Input
               id="email"
-              type="email"
+              type="text"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="user@example.com"
+              placeholder="user@example.com or 9876543210"
               required
             />
           </div>

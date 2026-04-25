@@ -30,7 +30,9 @@ const FARMER_NAMES = [
 export interface ApiUser {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
+  mobileNumber?: string | null;
+  userId?: string | null;
   role: string;
   createdAt: string;
 }
@@ -268,12 +270,16 @@ export const farmTatvaApi = {
   getOrders: (token: string) => request<ApiOrder[]>("/orders", {}, token),
   getOrderMeta: (token: string) =>
     request<ApiOrderMeta>("/orders/meta", {}, token),
-  register: (payload: { name: string; email: string; password: string }) =>
+  register: (payload: { name: string; mobileNumber: string; password: string }) =>
     request<AuthResponse>("/auth/register", {
       method: "POST",
       body: JSON.stringify(payload),
     }),
-  login: (payload: { email: string; password: string }) =>
+  login: (payload: {
+    email?: string;
+    mobileNumber?: string;
+    password: string;
+  }) =>
     request<AuthResponse>("/auth/login", {
       method: "POST",
       body: JSON.stringify(payload),

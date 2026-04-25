@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "motion/react";
-import { X, Leaf, Mail, Lock, User } from "lucide-react";
+import { X, Leaf, Smartphone, Lock, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { ApiUser } from "../lib/api";
 
@@ -8,7 +8,7 @@ interface LoginDialogProps {
   onClose: () => void;
   onSubmit: (
     mode: "login" | "register",
-    values: { name: string; email: string; password: string },
+    values: { name: string; mobileNumber: string; password: string },
   ) => void;
   isSubmitting: boolean;
   errorMessage?: string | null;
@@ -23,10 +23,19 @@ const getUserDisplayName = (user: ApiUser | null | undefined) => {
     return rawName;
   }
 
-  const rawEmail = typeof user?.email === "string" ? user.email.trim() : "";
+  const rawIdentifier =
+    typeof user?.mobileNumber === "string" && user.mobileNumber.trim()
+      ? user.mobileNumber.trim()
+      : typeof user?.userId === "string" && user.userId.trim()
+        ? user.userId.trim()
+        : typeof user?.email === "string"
+          ? user.email.trim()
+          : "";
 
-  if (rawEmail) {
-    return rawEmail.split("@")[0];
+  if (rawIdentifier) {
+    return rawIdentifier.includes("@")
+      ? rawIdentifier.split("@")[0]
+      : rawIdentifier;
   }
 
   return "Farmer";
@@ -52,7 +61,7 @@ export function LoginDialog({
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     name: "",
-    email: "",
+    mobileNumber: "",
     password: "",
   });
   const currentUserDisplayName = getUserDisplayName(currentUser);
@@ -64,7 +73,7 @@ export function LoginDialog({
       setIsLogin(true);
       setFormData({
         name: "",
-        email: "",
+        mobileNumber: "",
         password: "",
       });
     }
@@ -76,8 +85,13 @@ export function LoginDialog({
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    const nextValue =
+      field === "mobileNumber" ? value.replace(/\D/g, "").slice(0, 10) : value;
+    setFormData((prev) => ({ ...prev, [field]: nextValue }));
   };
+
+  const accountIdentifier =
+    currentUser?.mobileNumber ?? currentUser?.userId ?? currentUser?.email;
 
   return (
     <AnimatePresence>
@@ -152,9 +166,11 @@ export function LoginDialog({
                       </div>
                       <div>
                         <p className="text-xl">{currentUserDisplayName}</p>
-                        <p className="text-sm text-[#1B4332]/60">
-                          {currentUser.email}
-                        </p>
+                        {accountIdentifier && (
+                          <p className="text-sm text-[#1B4332]/60">
+                            {accountIdentifier}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="rounded-2xl bg-white px-4 py-3 text-sm">
@@ -206,17 +222,20 @@ export function LoginDialog({
 
                     <div>
                       <label className="block text-sm text-[#1B4332]/70 mb-2">
-                        Email
+                        Mobile Number
                       </label>
                       <div className="relative">
-                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1B4332]/40" />
+                        <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1B4332]/40" />
                         <input
-                          type="email"
-                          value={formData.email}
+                          type="tel"
+                          inputMode="numeric"
+                          pattern="[0-9]{10}"
+                          maxLength={10}
+                          value={formData.mobileNumber}
                           onChange={(e) =>
-                            handleInputChange("email", e.target.value)
+                            handleInputChange("mobileNumber", e.target.value)
                           }
-                          placeholder="email@example.com"
+                          placeholder="Enter 10-digit mobile number"
                           className="w-full pl-12 pr-4 py-3.5 bg-[#F8F4E1] border-2 border-transparent rounded-2xl text-[#1B4332] placeholder:text-[#1B4332]/40 focus:outline-none focus:border-[#1B4332] transition-colors"
                           required
                         />
@@ -277,7 +296,11 @@ export function LoginDialog({
                         type="button"
                         onClick={() => {
                           setIsLogin(!isLogin);
-                          setFormData({ name: "", email: "", password: "" });
+                          setFormData({
+                            name: "",
+                            mobileNumber: "",
+                            password: "",
+                          });
                         }}
                         className="text-[#1B4332] hover:underline"
                       >

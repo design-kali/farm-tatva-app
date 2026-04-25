@@ -32,6 +32,25 @@ const getOrCreateCart = async (userId) => {
 
 // Add to cart
 export const addToCart = async (userId, productId, quantity) => {
+  const normalizedQuantity = Number(quantity);
+
+  if (!productId) {
+    throw new Error("Product is required");
+  }
+
+  if (!Number.isFinite(normalizedQuantity) || normalizedQuantity <= 0) {
+    throw new Error("Quantity must be greater than 0");
+  }
+
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { id: true },
+  });
+
+  if (!product) {
+    throw new Error("This product is no longer available.");
+  }
+
   const cart = await getOrCreateCart(userId);
 
   const existingItem = await prisma.cartItem.findUnique({
@@ -46,7 +65,7 @@ export const addToCart = async (userId, productId, quantity) => {
   if (existingItem) {
     return prisma.cartItem.update({
       where: { id: existingItem.id },
-      data: { quantity: existingItem.quantity + quantity },
+      data: { quantity: existingItem.quantity + normalizedQuantity },
     });
   }
 
@@ -54,7 +73,7 @@ export const addToCart = async (userId, productId, quantity) => {
     data: {
       cartId: cart.id,
       productId,
-      quantity,
+      quantity: normalizedQuantity,
     },
   });
 };

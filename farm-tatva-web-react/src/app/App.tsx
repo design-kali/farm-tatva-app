@@ -49,10 +49,19 @@ const getUserDisplayName = (user: ApiUser | null | undefined) => {
     return rawName;
   }
 
-  const rawEmail = typeof user?.email === "string" ? user.email.trim() : "";
+  const rawIdentifier =
+    typeof user?.mobileNumber === "string" && user.mobileNumber.trim()
+      ? user.mobileNumber.trim()
+      : typeof user?.userId === "string" && user.userId.trim()
+        ? user.userId.trim()
+        : typeof user?.email === "string"
+          ? user.email.trim()
+          : "";
 
-  if (rawEmail) {
-    return rawEmail.split("@")[0];
+  if (rawIdentifier) {
+    return rawIdentifier.includes("@")
+      ? rawIdentifier.split("@")[0]
+      : rawIdentifier;
   }
 
   return "Farmer";
@@ -145,6 +154,10 @@ const getErrorMessage = (error: unknown) => {
   return "Something went wrong. Please try again.";
 };
 
+const normalizeMobileNumber = (value: string) => {
+  return value.replace(/\D/g, "").slice(0, 10);
+};
+
 export default function App() {
   const [session, setSession] = useState<StoredSession | null>(() =>
     readStoredSession(),
@@ -213,15 +226,60 @@ export default function App() {
     const guestCart = readStoredGuestCart();
 
     if (guestCart.length === 0) {
-      return null;
+      return { syncedCount: 0, skippedCount: 0 };
     }
+
+    const availableProducts =
+      products.length > 0
+        ? products
+        : (await farmTatvaApi.getProducts()).map(mapProductToCard);
+    const availableProductIds = new Set(
+      availableProducts.map((product) => product.id),
+    );
+    const validItems = guestCart.filter((item) => availableProductIds.has(item.id));
+    const skippedItems = guestCart.filter(
+      (item) => !availableProductIds.has(item.id),
+    );
+
+    let syncedCount = 0;
+
+    if (validItems.length === 0) {
+      clearStoredGuestCart();
+      return { syncedCount: 0, skippedCount: skippedItems.length };
+    }
+
+    const remainingGuestItems = [...validItems];
 
     for (const item of guestCart) {
-      await farmTatvaApi.addToCart(token, item.id, item.quantity);
+      if (!availableProductIds.has(item.id)) {
+        continue;
+      }
+
+      try {
+        await farmTatvaApi.addToCart(token, item.id, item.quantity);
+        syncedCount += 1;
+        const itemIndex = remainingGuestItems.findIndex(
+          (guestItem) => guestItem.id === item.id,
+        );
+
+        if (itemIndex >= 0) {
+          remainingGuestItems.splice(itemIndex, 1);
+        }
+      } catch {
+        continue;
+      }
     }
 
-    clearStoredGuestCart();
-    return guestCart.length;
+    if (remainingGuestItems.length > 0) {
+      persistGuestCart(remainingGuestItems);
+    } else {
+      clearStoredGuestCart();
+    }
+
+    return {
+      syncedCount,
+      skippedCount: guestCart.length - syncedCount,
+    };
   };
 
   useEffect(() => {
@@ -445,8 +503,15 @@ export default function App() {
 
   const handleAuthSubmit = async (
     mode: "login" | "register",
-    values: { name: string; email: string; password: string },
+    values: { name: string; mobileNumber: string; password: string },
   ) => {
+    const mobileNumber = normalizeMobileNumber(values.mobileNumber);
+
+    if (mobileNumber.length !== 10) {
+      setAuthError("Mobile number must be exactly 10 digits.");
+      return;
+    }
+
     setIsAuthSubmitting(true);
     setAuthError(null);
 
@@ -454,10 +519,14 @@ export default function App() {
       const response =
         mode === "login"
           ? await farmTatvaApi.login({
-              email: values.email,
+              mobileNumber,
               password: values.password,
             })
-          : await farmTatvaApi.register(values);
+          : await farmTatvaApi.register({
+              name: values.name,
+              mobileNumber,
+              password: values.password,
+            });
 
       const nextSession = {
         token: response.token,
@@ -465,7 +534,7 @@ export default function App() {
       };
 
       persistSession(nextSession);
-      const syncedGuestCount = await syncGuestCartToBackend(response.token);
+      const syncResult = await syncGuestCartToBackend(response.token);
       const requestId = startCartRequest();
       const backendCart = await farmTatvaApi.getCart(response.token);
 
@@ -490,9 +559,13 @@ export default function App() {
       setSelectedAddressId(null);
       setShowLoginDialog(false);
       setCartMessage(
-        syncedGuestCount
-          ? `Welcome ${getUserFirstName(response.user)}. Synced ${syncedGuestCount} guest item${syncedGuestCount === 1 ? "" : "s"} to your account.`
-          : `Welcome ${getUserFirstName(response.user)}. Your basket now syncs with the backend.`,
+        syncResult.syncedCount > 0 && syncResult.skippedCount > 0
+          ? `Welcome ${getUserFirstName(response.user)}. Synced ${syncResult.syncedCount} guest item${syncResult.syncedCount === 1 ? "" : "s"} and skipped ${syncResult.skippedCount} unavailable item${syncResult.skippedCount === 1 ? "" : "s"}.`
+          : syncResult.syncedCount > 0
+            ? `Welcome ${getUserFirstName(response.user)}. Synced ${syncResult.syncedCount} guest item${syncResult.syncedCount === 1 ? "" : "s"} to your account.`
+            : syncResult.skippedCount > 0
+              ? `Welcome ${getUserFirstName(response.user)}. We skipped ${syncResult.skippedCount} unavailable guest item${syncResult.skippedCount === 1 ? "" : "s"} from this device basket.`
+              : `Welcome ${getUserFirstName(response.user)}. Your basket now syncs with the backend.`,
       );
     } catch (error) {
       setAuthError(getErrorMessage(error));
