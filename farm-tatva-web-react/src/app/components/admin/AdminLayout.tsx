@@ -62,7 +62,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       <div
         className={cn(
           "fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:shadow-none",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
@@ -94,7 +94,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                         "flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                         isActive
                           ? "bg-blue-50 text-blue-700 border-r-2 border-blue-700"
-                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50",
                       )}
                     >
                       <Icon className="h-5 w-5" />
@@ -134,7 +134,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                   </Link>
                   <span className="shrink-0">/</span>
                   <span className="truncate text-gray-900 font-medium">
-                    {navigation.find(item => isActiveRoute(item.href))?.name || "Dashboard"}
+                    {navigation.find((item) => isActiveRoute(item.href))
+                      ?.name || "Dashboard"}
                   </span>
                 </div>
               </div>
@@ -167,7 +168,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                   <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
                     A
                   </div>
-                  <span className="hidden md:block text-sm text-gray-700">Admin User</span>
+                  <span className="hidden md:block text-sm text-gray-700">
+                    Admin User
+                  </span>
                 </div>
 
                 <Button
