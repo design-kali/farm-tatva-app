@@ -186,7 +186,12 @@ export const updateOrderStatus = async (orderId, status) => {
     where: { id: orderId },
   });
 
-  if (!VALID_ORDER_TRANSITIONS[order.status].includes(status)) {
+  if (!order) {
+    throw new Error("Order not found");
+  }
+
+  const allowedTransitions = VALID_ORDER_TRANSITIONS[order.status] || [];
+  if (!allowedTransitions.includes(status)) {
     throw new Error(`Cannot move from ${order.status} to ${status}`);
   }
 

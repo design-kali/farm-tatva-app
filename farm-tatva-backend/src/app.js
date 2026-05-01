@@ -27,4 +27,22 @@ app.get("/", (req, res) => {
   res.send("Farm Tatva Backend Running 🚀");
 });
 
+app.use((req, res) => {
+  res.status(404).json({ error: "Not found" });
+});
+
+// Central error handler (includes async errors in Express 5)
+app.use((err, req, res, next) => {
+  const status = Number(err?.statusCode || err?.status || 500);
+  const message =
+    status >= 500 ? "Internal server error" : err?.message || "Request failed";
+
+  if (status >= 500) {
+    console.error("[error]", err);
+  }
+
+  if (res.headersSent) return;
+  res.status(status).json({ error: message });
+});
+
 export default app;
