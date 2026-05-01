@@ -18,7 +18,10 @@ import {
 interface ProductCardProps {
   product: ProductCardModel;
   index: number;
-  onAddToCart: (product: ProductCardModel, pricingOption: ApiPricingOption) => void;
+  onAddToCart: (
+    product: ProductCardModel,
+    pricingOption: ApiPricingOption,
+  ) => void;
   onUpdateQuantity: (cartItemId: string, nextQuantity: number) => void;
   getCartLine: (
     productId: string,
@@ -46,13 +49,61 @@ export function ProductCard({
   const isSoldOut = product.stock <= 0;
   const selectedPricingOption = useMemo(
     () =>
-      product.pricingOptions.find((option) => option.id === selectedPricingOptionId) ||
+      product.pricingOptions.find(
+        (option) => option.id === selectedPricingOptionId,
+      ) || product.defaultPricingOption,
+    [
       product.defaultPricingOption,
-    [product.defaultPricingOption, product.pricingOptions, selectedPricingOptionId],
+      product.pricingOptions,
+      selectedPricingOptionId,
+    ],
   );
   const cartLine = getCartLine(product.id, selectedPricingOption.id);
   const quantity = cartLine?.quantity || 0;
-  const pricing = calculatePricingBreakdown(selectedPricingOption, Math.max(quantity, selectedPricingOption.minQuantity));
+  const pricing = calculatePricingBreakdown(
+    selectedPricingOption,
+    Math.max(quantity, selectedPricingOption.minQuantity),
+  );
+  const offerDetails = useMemo(() => {
+    const now = Date.now();
+    const activeOffers = selectedPricingOption.offers
+      .filter((offer) => {
+        if (!offer.isActive) {
+          return false;
+        }
+
+        if (offer.startsAt) {
+          const startsAt = new Date(offer.startsAt).getTime();
+          if (!Number.isNaN(startsAt) && startsAt > now) {
+            return false;
+          }
+        }
+
+        if (offer.endsAt) {
+          const endsAt = new Date(offer.endsAt).getTime();
+          if (!Number.isNaN(endsAt) && endsAt < now) {
+            return false;
+          }
+        }
+
+        return true;
+      })
+      .sort((a, b) => a.minQuantity - b.minQuantity);
+
+    if (activeOffers.length === 0) {
+      return "No offers currently";
+    }
+
+    return activeOffers
+      .map((offer) => {
+        const discountLabel =
+          offer.discountType === "PERCENTAGE"
+            ? `${offer.discountValue}% off`
+            : `Rs ${offer.discountValue} off per ${selectedPricingOption.unit}`;
+        return `${discountLabel} from ${formatQuantity(offer.minQuantity)} ${selectedPricingOption.unit}`;
+      })
+      .join(" • ");
+  }, [selectedPricingOption.offers, selectedPricingOption.unit]);
 
   const currentImage =
     product.images[currentImageIndex] || product.images[0] || "";
@@ -209,8 +260,7 @@ export function ProductCard({
               </span>
             </div>
             <p className="text-xs text-[#1B4332]/55 mt-1">
-              Buy from {formatQuantity(selectedPricingOption.minQuantity)} in steps of{" "}
-              {formatQuantity(selectedPricingOption.quantityStep)}
+              Offers: {offerDetails}
             </p>
             {pricing.appliedOffer && (
               <p className="mt-1 text-xs text-[#2D6A4F]">
@@ -218,7 +268,8 @@ export function ProductCard({
                 {pricing.appliedOffer.discountType === "PERCENTAGE"
                   ? `${pricing.appliedOffer.discountValue}% off`
                   : `Rs ${pricing.appliedOffer.discountValue} off per ${selectedPricingOption.unit}`}{" "}
-                from {formatQuantity(pricing.appliedOffer.minQuantity)} {selectedPricingOption.unit}
+                from {formatQuantity(pricing.appliedOffer.minQuantity)}{" "}
+                {selectedPricingOption.unit}
               </p>
             )}
           </div>

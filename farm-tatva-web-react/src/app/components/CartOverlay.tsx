@@ -168,7 +168,7 @@ export function CartOverlay({
                           {item.name}
                         </h4>
                         <p className="text-xs text-[#1B4332]/60 mb-2">
-                          {item.optionLabel} by {item.farmer}
+                          {item.optionLabel}
                         </p>
                         <div className="flex items-center justify-between">
                           <span className="text-[#1B4332]">
@@ -187,7 +187,9 @@ export function CartOverlay({
                                 onUpdateQuantity(
                                   item.id,
                                   Number(
-                                    (item.quantity - item.quantityStep).toFixed(3),
+                                    (item.quantity - item.quantityStep).toFixed(
+                                      3,
+                                    ),
                                   ),
                                 )
                               }
@@ -206,7 +208,9 @@ export function CartOverlay({
                                 onUpdateQuantity(
                                   item.id,
                                   Number(
-                                    (item.quantity + item.quantityStep).toFixed(3),
+                                    (item.quantity + item.quantityStep).toFixed(
+                                      3,
+                                    ),
                                   ),
                                 )
                               }
@@ -219,7 +223,8 @@ export function CartOverlay({
                         </div>
                         {item.pricing.discount > 0 && (
                           <p className="mt-2 text-xs text-[#2D6A4F]">
-                            Saved Rs {item.pricing.discount.toFixed(2)} on this line
+                            Saved Rs {item.pricing.discount.toFixed(2)} on this
+                            line
                           </p>
                         )}
                       </div>
@@ -285,9 +290,9 @@ export function CartOverlay({
                         ? "Placing Order..."
                         : !selectedDeliveryArea
                           ? "Select Society to Continue"
-                        : !selectedAddressId
-                          ? "Select Address to Continue"
-                          : "Proceed to Checkout"}
+                          : !selectedAddressId
+                            ? "Select Address to Continue"
+                            : "Proceed to Checkout"}
                   </span>
                   <Leaf className="w-5 h-5" />
                 </motion.button>
