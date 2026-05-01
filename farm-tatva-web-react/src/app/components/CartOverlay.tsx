@@ -7,6 +7,7 @@ import type {
   CreateAddressPayload,
 } from "../lib/api";
 import { formatQuantity } from "../lib/api";
+import { FaWhatsapp } from "react-icons/fa";
 
 interface CartItem {
   id: string;
@@ -48,7 +49,7 @@ interface CartOverlayProps {
   isAddressSubmitting?: boolean;
   isCheckoutLoading?: boolean;
   message?: string | null;
-  onCheckout: () => void;
+  onCheckout: (cart: CartItem[], address?: ApiAddress) => void;
 }
 
 export function CartOverlay({
@@ -279,7 +280,11 @@ export function CartOverlay({
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={onCheckout}
+                  onClick={onCheckout.bind(
+                    null,
+                    cartItems,
+                    addresses.find((addr) => addr.id === selectedAddressId),
+                  )}
                   disabled={isCheckoutDisabled}
                   className="w-full bg-[#1B4332] text-white py-4 rounded-full flex items-center justify-center gap-2 hover:bg-[#2D6A4F] transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
                 >
@@ -292,9 +297,12 @@ export function CartOverlay({
                           ? "Select Society to Continue"
                           : !selectedAddressId
                             ? "Select Address to Continue"
-                            : "Proceed to Checkout"}
+                            : "Continue to order on Whatsapp"}
                   </span>
-                  <Leaf className="w-5 h-5" />
+
+                  {!selectedAddressId && <Leaf className="w-5 h-5" />}
+
+                  {selectedAddressId && <FaWhatsapp className="w-5 h-5" />}
                 </motion.button>
               </div>
             )}

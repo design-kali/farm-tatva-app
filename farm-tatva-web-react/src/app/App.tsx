@@ -41,6 +41,8 @@ import {
   readStoredSession,
   type StoredSession,
 } from "./lib/auth";
+import { FaWhatsapp } from "react-icons/fa";
+import { handleWhatsAppRedirect } from "./lib/wa-service";
 
 const GUEST_CART_STORAGE_KEY = "farm-tatva-guest-cart";
 const DELIVERY_AREA_STORAGE_KEY = "farm-tatva-delivery-area";
@@ -675,10 +677,7 @@ export default function App() {
     }
   };
 
-  const getCartLine = (
-    productId: string,
-    pricingOptionId: string,
-  ) => {
+  const getCartLine = (productId: string, pricingOptionId: string) => {
     const item = cart.find(
       (cartItem) =>
         cartItem.productId === productId &&
@@ -778,7 +777,10 @@ export default function App() {
         return;
       }
 
-      if (nextQuantity > 0 && nextQuantity * existingItem.quantityStep > existingItem.stock + 0.000001) {
+      if (
+        nextQuantity > 0 &&
+        nextQuantity * existingItem.quantityStep > existingItem.stock + 0.000001
+      ) {
         setCartMessage("You have reached the available stock for this item.");
         return;
       }
@@ -882,7 +884,24 @@ export default function App() {
     }
   };
 
-  const handleCheckout = () => {
+  const getWhatsAppOrderText = (cart: CartItem[], address?: ApiAddress) => {
+    const text = `Hi, Place My Order 🛒
+Items:📦
+${cart
+  .map((item, index) => {
+    const product = products.find((product) => product.id === item.productId);
+    return `${index + 1}. ${product?.name || "Product"} × ${formatQuantity(item.quantity)}`;
+  })
+  .join("\n")}
+
+
+Delivery Address:
+Flat 606, Tower T-19`;
+
+    return text;
+  };
+
+  const handleCheckout = (cart: CartItem[], address?: ApiAddress) => {
     if (!authToken) {
       requireAuth("Sign in to continue to checkout.");
       return;
@@ -920,6 +939,11 @@ export default function App() {
         setCartMessage(
           `Order placed successfully. Order ${order.id.slice(0, 8)} is ${order.status.toLowerCase()}.`,
         );
+
+        handleWhatsAppRedirect(getWhatsAppOrderText(cart, address));
+
+        // Initially doing only whatsapp redirect, rest of the checkout flow will be implemented later. For now, we want to test the whatsapp integration and get feedback from users on the new flow before investing more time in it.
+        return;
       } catch (error) {
         if (!isLatestCartRequest(requestId)) {
           return;
@@ -937,9 +961,7 @@ export default function App() {
     cart.reduce((sum, item) => sum + item.pricing.total, 0).toFixed(2),
   );
   const lowestPrice = products.length
-    ? Math.min(
-        ...products.map((product) => product.defaultPricingOption.price),
-      )
+    ? Math.min(...products.map((product) => product.defaultPricingOption.price))
     : 35;
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const visibleProducts = products.filter((product) => {
@@ -954,6 +976,18 @@ export default function App() {
 
     return matchesCategory && matchesSearch;
   });
+
+  const openWhatsAppCatalog = () => {
+    const whatsappNumber =
+      import.meta.env.WHATSAPP_BUSINESS_NUMBER || "+919091924342";
+    const text = encodeURIComponent(
+      `Hi, I would like order fresh farm produce. 
+Please share the catalog and order details. Thanks!`,
+    );
+    const catalogUrl = `https://wa.me/${whatsappNumber}?text=${text}`;
+
+    window.open(catalogUrl, "_blank");
+  };
 
   return (
     <div className="min-h-screen bg-[#F8F4E1]">
@@ -1126,8 +1160,10 @@ export default function App() {
                   transition={{ delay: 0.5 }}
                   className="text-base md:text-lg lg:text-xl text-white/90 mb-6 md:mb-8 leading-relaxed"
                 >
-                  Your storefront is now powered by live backend products,
-                  categories, authentication, and cart sync.
+                  🛒 We’re Fine-Tuning Our Web Checkout While we put the
+                  finishing touches on our online ordering experience, you can
+                  continue to place your orders seamlessly through our WhatsApp
+                  Catalog.
                 </motion.p>
                 <motion.button
                   initial={{ opacity: 0, y: 20 }}
@@ -1136,14 +1172,16 @@ export default function App() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() =>
-                    document
-                      .getElementById("products-section")
-                      ?.scrollIntoView({ behavior: "smooth" })
+                    // document
+                    //   .getElementById("products-section")
+                    //   ?.scrollIntoView({ behavior: "smooth" })
+
+                    openWhatsAppCatalog()
                   }
                   className="px-8 py-4 bg-white text-[#1B4332] rounded-full inline-flex items-center gap-2 shadow-xl hover:shadow-2xl transition-shadow"
                 >
-                  <span className="text-lg">Start Your Weekly Stock-Up</span>
-                  <Leaf className="w-5 h-5" />
+                  <span className="text-lg">Start Your Weekly Stock-Up </span>
+                  <FaWhatsapp className="w-5 h-5" />
                 </motion.button>
 
                 <motion.div
