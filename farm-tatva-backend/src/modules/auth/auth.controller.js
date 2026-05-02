@@ -48,12 +48,12 @@ export const getProfile = async (req, res) => {
 
 export const sendOtp = async (req, res) => {
   try {
-    const { phone } = req.body;
+    const { mobileNumber } = req.body;
 
-    if (!phone) {
+    if (!mobileNumber) {
       return res.status(400).json({
         success: false,
-        message: "Phone number is required",
+        message: "Mobile number is required",
       });
     }
 
@@ -62,13 +62,16 @@ export const sendOtp = async (req, res) => {
 
     await prisma.otpVerification.create({
       data: {
-        phone,
+        phone: mobileNumber,
         otpHash,
         expiresAt: getOTPExpiry(),
       },
     });
 
-    const smsResult = await smsService.sendSMS(phone, smsTemplates.otp(otp));
+    const smsResult = await smsService.sendSMS(
+      mobileNumber,
+      smsTemplates.otp(otp),
+    );
 
     res.json({
       success: true,
@@ -86,11 +89,11 @@ export const sendOtp = async (req, res) => {
 
 export const verifyOtp = async (req, res) => {
   try {
-    const { phone, otp } = req.body;
+    const { mobileNumber, otp } = req.body;
 
     const record = await prisma.otpVerification.findFirst({
       where: {
-        phone,
+        phone: mobileNumber,
         verified: false,
       },
       orderBy: {

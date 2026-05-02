@@ -248,7 +248,9 @@ const pickImage = (seed: string, images: string[]) => {
 };
 
 export const formatQuantity = (value: number) => {
-  return Number.isInteger(value) ? String(value) : value.toFixed(3).replace(/\.?0+$/, "");
+  return Number.isInteger(value)
+    ? String(value)
+    : value.toFixed(3).replace(/\.?0+$/, "");
 };
 
 export const calculatePricingBreakdown = (
@@ -275,31 +277,32 @@ export const calculatePricingBreakdown = (
   const appliedOffer =
     applicableOffers.length === 0
       ? null
-      : applicableOffers.reduce((bestOffer, currentOffer) => {
-          const bestDiscount =
-            !bestOffer
+      : applicableOffers.reduce(
+          (bestOffer, currentOffer) => {
+            const bestDiscount = !bestOffer
               ? 0
               : bestOffer.discountType === "FLAT"
                 ? Math.min(subtotal, quantity * bestOffer.discountValue)
                 : (subtotal * bestOffer.discountValue) / 100;
-          const currentDiscount =
-            currentOffer.discountType === "FLAT"
-              ? Math.min(subtotal, quantity * currentOffer.discountValue)
-              : (subtotal * currentOffer.discountValue) / 100;
+            const currentDiscount =
+              currentOffer.discountType === "FLAT"
+                ? Math.min(subtotal, quantity * currentOffer.discountValue)
+                : (subtotal * currentOffer.discountValue) / 100;
 
-          if (!bestOffer || currentDiscount > bestDiscount) {
-            return currentOffer;
-          }
+            if (!bestOffer || currentDiscount > bestDiscount) {
+              return currentOffer;
+            }
 
-          return bestOffer;
-        }, null as ApiOfferRule | null);
+            return bestOffer;
+          },
+          null as ApiOfferRule | null,
+        );
 
   const discount = appliedOffer
     ? Number(
-        (
-          appliedOffer.discountType === "FLAT"
-            ? Math.min(subtotal, quantity * appliedOffer.discountValue)
-            : (subtotal * appliedOffer.discountValue) / 100
+        (appliedOffer.discountType === "FLAT"
+          ? Math.min(subtotal, quantity * appliedOffer.discountValue)
+          : (subtotal * appliedOffer.discountValue) / 100
         ).toFixed(2),
       )
     : 0;
@@ -382,7 +385,11 @@ export const farmTatvaApi = {
   getOrders: (token: string) => request<ApiOrder[]>("/orders", {}, token),
   getOrderMeta: (token: string) =>
     request<ApiOrderMeta>("/orders/meta", {}, token),
-  register: (payload: { name: string; mobileNumber: string; password: string }) =>
+  register: (payload: {
+    name: string;
+    mobileNumber: string;
+    password: string;
+  }) =>
     request<AuthResponse>("/auth/register", {
       method: "POST",
       body: JSON.stringify(payload),
@@ -396,6 +403,17 @@ export const farmTatvaApi = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  sendOTP: (mobileNumber: string) =>
+    request<{ success: boolean; message: string }>("/auth/send-otp", {
+      method: "POST",
+      body: JSON.stringify({ mobileNumber }),
+    }),
+  verifyOTP: (mobileNumber: string, otp: string) =>
+    request<AuthResponse>("/auth/verify-otp", {
+      method: "POST",
+      body: JSON.stringify({ mobileNumber, otp }),
+    }),
+
   getProfile: (token: string) => request<ApiUser>("/auth/profile", {}, token),
   getCart: (token: string) => request<ApiCart>("/cart", {}, token),
   getAddresses: (token: string, deliveryAreaId?: string) =>
@@ -447,10 +465,7 @@ export const farmTatvaApi = {
       token,
     ),
   // Admin CRUD: Products
-  createProduct: (
-    token: string,
-    payload: Record<string, unknown>,
-  ) =>
+  createProduct: (token: string, payload: Record<string, unknown>) =>
     request<ApiProduct>(
       "/products",
       {
@@ -459,7 +474,11 @@ export const farmTatvaApi = {
       },
       token,
     ),
-  updateProduct: (token: string, id: string, payload: Record<string, unknown>) =>
+  updateProduct: (
+    token: string,
+    id: string,
+    payload: Record<string, unknown>,
+  ) =>
     request<ApiProduct>(
       `/products/${id}`,
       {

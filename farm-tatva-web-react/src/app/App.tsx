@@ -608,6 +608,33 @@ export default function App() {
     }
   };
 
+  const handleSendOTP = async (mobileNumber: string) => {
+    setAuthError(null);
+    setIsAuthSubmitting(true);
+
+    try {
+      await farmTatvaApi.sendOTP(normalizeMobileNumber(mobileNumber));
+      setCartMessage("OTP sent to your mobile number.");
+    } catch (error) {
+      throw error;
+    } finally {
+      setIsAuthSubmitting(false);
+    }
+  };
+
+  const handleVerifyOTP = async (mobileNumber: string, otp: string) => {
+    setAuthError(null);
+    setIsAuthSubmitting(true);
+
+    try {
+      await farmTatvaApi.verifyOTP(normalizeMobileNumber(mobileNumber), otp);
+    } catch (error) {
+      throw error;
+    } finally {
+      setIsAuthSubmitting(false);
+    }
+  };
+
   const handleSelectDeliveryArea = (deliveryAreaId: string) => {
     const nextArea =
       deliveryAreas.find((area) => area.id === deliveryAreaId) || null;
@@ -886,7 +913,8 @@ export default function App() {
 
   const getWhatsAppOrderText = (cart: CartItem[], address?: ApiAddress) => {
     const text = `Hi, Place My Order 🛒
-Items:📦
+Items: 📦
+
 ${cart
   .map((item, index) => {
     const product = products.find((product) => product.id === item.productId);
@@ -896,7 +924,7 @@ ${cart
 
 
 Delivery Address:
-Flat 606, Tower T-19`;
+${address ? `${address.deliveryArea?.name}, ${address.addressLine}, ${address.city}, ${address.zipCode}` : "No address selected"}`;
 
     return text;
   };
@@ -1551,7 +1579,7 @@ Please share the catalog and order details. Thanks!`,
                 doorstep
               </p>
             </div>
-            <div>
+            {/* <div>
               <h5 className="mb-4">Quick Links</h5>
               <ul className="space-y-2 text-sm text-white/80">
                 <li>About Us</li>
@@ -1559,14 +1587,10 @@ Please share the catalog and order details. Thanks!`,
                 <li>Delivery Areas</li>
                 <li>Contact</li>
               </ul>
-            </div>
+            </div> */}
             <div>
               <h5 className="mb-4">Contact</h5>
-              <p className="text-sm text-white/80">
-                Email: hello@farmtatva.com
-                <br />
-                Phone: +91 98765 43210
-              </p>
+              <p className="text-sm text-white/80">Phone: +919091924342</p>
             </div>
           </div>
           <div className="border-t border-white/20 mt-8 pt-8 text-center text-sm text-white/60">
@@ -1618,6 +1642,8 @@ Please share the catalog and order details. Thanks!`,
         isOpen={showLoginDialog}
         onClose={closeLoginDialog}
         onSubmit={handleAuthSubmit}
+        onSendOTP={handleSendOTP}
+        onVerifyOTP={handleVerifyOTP}
         isSubmitting={isAuthSubmitting}
         errorMessage={authError}
         currentUser={currentUser}

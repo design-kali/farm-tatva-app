@@ -15,3 +15,13 @@
 **/**.zip
 **/**.rar
 
+**/.env
+**/.env.local
+**/.env.development
+**/.env.production
+**/.env.test
+**/.env.staging
+**/.env.development
+**/.env.prod
+**/.env.local
+**/.env.dev
