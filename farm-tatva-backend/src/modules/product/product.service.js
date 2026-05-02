@@ -48,11 +48,34 @@ const buildProductPayload = (data, existingProduct) => {
     throw new Error("Inventory unit is required");
   }
 
-  const pricingOptions = normalizePricingOptionsInput(
+  const normalizedPricingOptions = normalizePricingOptionsInput(
     data.pricingOptions,
     data.price ?? existingProduct?.price,
     data.unit ?? existingProduct?.inventoryUnit ?? "unit",
   );
+
+  const pricingOptions = normalizedPricingOptions.map((option, index) => {
+    const sourceOption =
+      data.pricingOptions?.[index] ??
+      existingProduct?.pricingOptions?.[index] ??
+      {};
+
+    return {
+      ...option,
+      ...(sourceOption.id ? { id: sourceOption.id } : {}),
+      offers: option.offers.map((offer, offerIndex) => {
+        const sourceOffer =
+          sourceOption.offers?.[offerIndex] ??
+          existingProduct?.pricingOptions?.[index]?.offers?.[offerIndex] ??
+          {};
+
+        return {
+          ...offer,
+          ...(sourceOffer.id ? { id: sourceOffer.id } : {}),
+        };
+      }),
+    };
+  });
 
   return {
     name: productName,
@@ -66,41 +89,140 @@ const buildProductPayload = (data, existingProduct) => {
 };
 
 const savePricingOptions = async (tx, productId, pricingOptions) => {
-  await tx.productOfferRule.deleteMany({
-    where: { pricingOption: { productId } },
-  });
-  await tx.productPricingOption.deleteMany({
+  const existingOptions = await tx.productPricingOption.findMany({
     where: { productId },
+    include: {
+      offers: true,
+    },
   });
 
-  for (const option of pricingOptions) {
-    await tx.productPricingOption.create({
-      data: {
-        productId,
-        label: option.label,
-        unit: option.unit,
-        price: option.price,
-        quantityStep: option.quantityStep,
-        minQuantity: option.minQuantity,
-        maxQuantity: option.maxQuantity,
-        inventoryFactor: option.inventoryFactor,
-        sortOrder: option.sortOrder,
-        isDefault: option.isDefault,
-        offers:
-          option.offers.length > 0
-            ? {
-                create: option.offers.map((offer) => ({
-                  minQuantity: offer.minQuantity,
-                  discountType: offer.discountType,
-                  discountValue: offer.discountValue,
-                  isActive: offer.isActive,
-                  startsAt: offer.startsAt,
-                  endsAt: offer.endsAt,
-                })),
-              }
-            : undefined,
-      },
+  const pricingOptionsWithIds = pricingOptions.map((option) => {
+    if (option.id) {
+      return option;
+    }
+
+    const matchedExistingOption = existingOptions.find(
+      (existingOption) => existingOption.unit === option.unit,
+    );
+
+    return matchedExistingOption
+      ? {
+          ...option,
+          id: matchedExistingOption.id,
+          offers: option.offers.map((offer, index) => {
+            const matchedExistingOffer = matchedExistingOption.offers?.[index];
+
+            return matchedExistingOffer
+              ? { ...offer, id: matchedExistingOffer.id }
+              : offer;
+          }),
+        }
+      : option;
+  });
+
+  const existingOptionIds = new Set(existingOptions.map((option) => option.id));
+  const incomingOptionIds = new Set(
+    pricingOptionsWithIds
+      .map((option) => option.id)
+      .filter(Boolean)
+      .map(String),
+  );
+
+  const optionIdsToDelete = [...existingOptionIds].filter(
+    (id) => !incomingOptionIds.has(String(id)),
+  );
+
+  if (optionIdsToDelete.length > 0) {
+    await tx.productOfferRule.deleteMany({
+      where: { pricingOptionId: { in: optionIdsToDelete } },
     });
+
+    await tx.productPricingOption.deleteMany({
+      where: { id: { in: optionIdsToDelete } },
+    });
+  }
+
+  for (const option of pricingOptionsWithIds) {
+    const savedOption = option.id
+      ? await tx.productPricingOption.update({
+          where: { id: option.id },
+          data: {
+            label: option.label,
+            unit: option.unit,
+            price: option.price,
+            quantityStep: option.quantityStep,
+            minQuantity: option.minQuantity,
+            maxQuantity: option.maxQuantity,
+            inventoryFactor: option.inventoryFactor,
+            sortOrder: option.sortOrder,
+            isDefault: option.isDefault,
+          },
+        })
+      : await tx.productPricingOption.create({
+          data: {
+            productId,
+            label: option.label,
+            unit: option.unit,
+            price: option.price,
+            quantityStep: option.quantityStep,
+            minQuantity: option.minQuantity,
+            maxQuantity: option.maxQuantity,
+            inventoryFactor: option.inventoryFactor,
+            sortOrder: option.sortOrder,
+            isDefault: option.isDefault,
+          },
+        });
+
+    const existingOffers =
+      existingOptions.find(
+        (existingOption) => existingOption.id === savedOption.id,
+      )?.offers ?? [];
+
+    const existingOfferIds = new Set(existingOffers.map((offer) => offer.id));
+    const incomingOfferIds = new Set(
+      option.offers
+        .map((offer) => offer.id)
+        .filter(Boolean)
+        .map(String),
+    );
+
+    const offerIdsToDelete = [...existingOfferIds].filter(
+      (id) => !incomingOfferIds.has(String(id)),
+    );
+
+    if (offerIdsToDelete.length > 0) {
+      await tx.productOfferRule.deleteMany({
+        where: { id: { in: offerIdsToDelete } },
+      });
+    }
+
+    for (const offer of option.offers) {
+      if (offer.id) {
+        await tx.productOfferRule.update({
+          where: { id: offer.id },
+          data: {
+            minQuantity: offer.minQuantity,
+            discountType: offer.discountType,
+            discountValue: offer.discountValue,
+            isActive: offer.isActive,
+            startsAt: offer.startsAt,
+            endsAt: offer.endsAt,
+          },
+        });
+      } else {
+        await tx.productOfferRule.create({
+          data: {
+            pricingOptionId: savedOption.id,
+            minQuantity: offer.minQuantity,
+            discountType: offer.discountType,
+            discountValue: offer.discountValue,
+            isActive: offer.isActive,
+            startsAt: offer.startsAt,
+            endsAt: offer.endsAt,
+          },
+        });
+      }
+    }
   }
 };
 

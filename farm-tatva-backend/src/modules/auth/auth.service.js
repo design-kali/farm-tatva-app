@@ -29,6 +29,20 @@ export const registerUser = async (data) => {
     throw new Error("Mobile number already exists");
   }
 
+  const verifiedOtp = await prisma.otpVerification.findFirst({
+    where: {
+      phone: mobileNumber,
+      verified: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  if (!verifiedOtp) {
+    throw new Error("Please verify your mobile number before registering");
+  }
+
   const hashedPassword = await bcrypt.hash(data.password, 10);
 
   const user = await prisma.user.create({
@@ -36,6 +50,16 @@ export const registerUser = async (data) => {
       name: data.name.trim(),
       email: mobileNumber,
       password: hashedPassword,
+    },
+  });
+
+  await prisma.otpVerification.updateMany({
+    where: {
+      phone: mobileNumber,
+      verified: true,
+    },
+    data: {
+      verified: false,
     },
   });
 

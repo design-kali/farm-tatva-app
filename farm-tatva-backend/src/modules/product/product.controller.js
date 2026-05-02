@@ -156,6 +156,8 @@ export const editProduct = async (req, res) => {
     const product = await updateProduct(req.params.id, req.body);
     res.json(product);
   } catch (err) {
+    console.log(err);
+    
     res.status(400).json({ error: err.message });
   }
 };

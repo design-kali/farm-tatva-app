@@ -1,9 +1,16 @@
-import {
-  registerUser,
-  loginUser,
-  getUserProfileById,
-} from "./auth.service.js";
+import { registerUser, loginUser, getUserProfileById } from "./auth.service.js";
 import { generateToken } from "../../utils/jwt.js";
+
+import prisma from "../../config/db.js";
+import smsService from "../../services/sms/index.js";
+import {
+  generateOTP,
+  hashOTP,
+  verifyOTP,
+  getOTPExpiry,
+} from "../../utils/otp.js";
+
+import { smsTemplates } from "../../services/sms/sms.templates.js";
 
 export const register = async (req, res) => {
   try {
@@ -37,4 +44,102 @@ export const getProfile = async (req, res) => {
   }
 
   res.json(user);
+};
+
+export const sendOtp = async (req, res) => {
+  try {
+    const { phone } = req.body;
+
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number is required",
+      });
+    }
+
+    const otp = generateOTP();
+    const otpHash = await hashOTP(otp);
+
+    await prisma.otpVerification.create({
+      data: {
+        phone,
+        otpHash,
+        expiresAt: getOTPExpiry(),
+      },
+    });
+
+    const smsResult = await smsService.sendSMS(phone, smsTemplates.otp(otp));
+
+    res.json({
+      success: true,
+      message: "OTP sent successfully",
+      details: smsResult,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const verifyOtp = async (req, res) => {
+  try {
+    const { phone, otp } = req.body;
+
+    const record = await prisma.otpVerification.findFirst({
+      where: {
+        phone,
+        verified: false,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    if (!record) {
+      return res.status(404).json({
+        success: false,
+        message: "OTP not found",
+      });
+    }
+
+    if (record.expiresAt < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP has expired",
+      });
+    }
+
+    const isValid = await verifyOTP(otp, record.otpHash);
+
+    if (!isValid) {
+      await prisma.otpVerification.update({
+        where: { id: record.id },
+        data: { attempts: { increment: 1 } },
+      });
+
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP",
+      });
+    }
+
+    await prisma.otpVerification.update({
+      where: { id: record.id },
+      data: { verified: true },
+    });
+
+    res.json({
+      success: true,
+      message: "OTP verified successfully",
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
 };

@@ -92,7 +92,9 @@ export default function AdminProducts() {
     maxStock: "",
     inventoryUnit: "kg",
     categoryId: "none",
-    pricingOptions: [createPricingOptionRow(undefined, true)] as PricingOptionFormRow[],
+    pricingOptions: [
+      createPricingOptionRow(undefined, true),
+    ] as PricingOptionFormRow[],
     imageFiles: [] as ImageFile[],
   });
   const [saving, setSaving] = useState(false);
@@ -155,7 +157,9 @@ export default function AdminProducts() {
       categoryId: product.categoryId || "none",
       pricingOptions:
         product.pricingOptions && product.pricingOptions.length > 0
-          ? product.pricingOptions.map((option) => createPricingOptionRow(option))
+          ? product.pricingOptions.map((option) =>
+              createPricingOptionRow(option),
+            )
           : [createPricingOptionRow(undefined, true)],
       imageFiles: [],
     });
@@ -183,7 +187,9 @@ export default function AdminProducts() {
     URL.revokeObjectURL(formData.imageFiles[index].preview);
     setFormData((current) => ({
       ...current,
-      imageFiles: current.imageFiles.filter((_, imageIndex) => imageIndex !== index),
+      imageFiles: current.imageFiles.filter(
+        (_, imageIndex) => imageIndex !== index,
+      ),
     }));
   };
 
@@ -374,7 +380,9 @@ export default function AdminProducts() {
           await uploadProductImages(product.id, imageFiles);
           const updatedProduct = await farmTatvaApi.getProduct(product.id);
           setProducts((current) =>
-            current.map((row) => (row.id === product.id ? updatedProduct : row)),
+            current.map((row) =>
+              row.id === product.id ? updatedProduct : row,
+            ),
           );
         } catch (err) {
           setError(
@@ -403,17 +411,24 @@ export default function AdminProducts() {
 
     try {
       await farmTatvaApi.deleteProduct(session.token, productId);
-      setProducts((current) => current.filter((product) => product.id !== productId));
+      setProducts((current) =>
+        current.filter((product) => product.id !== productId),
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete product.");
+      setError(
+        err instanceof Error ? err.message : "Failed to delete product.",
+      );
     }
   };
 
   const filteredProducts = useMemo(
     () =>
-      products.filter((product) =>
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.category?.name.toLowerCase().includes(searchQuery.toLowerCase()),
+      products.filter(
+        (product) =>
+          product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          product.category?.name
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()),
       ),
     [products, searchQuery],
   );
@@ -464,7 +479,11 @@ export default function AdminProducts() {
       header: "Actions",
       render: (_value: unknown, row: ApiProduct) => (
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" onClick={() => openEditDialog(row)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => openEditDialog(row)}
+          >
             <Edit className="h-4 w-4" />
           </Button>
           <Button
@@ -511,7 +530,9 @@ export default function AdminProducts() {
         <AdminCard>
           <div className="text-center">
             <div className="text-2xl font-bold text-green-600">
-              {loading ? "..." : products.filter((product) => product.stock > 0).length}
+              {loading
+                ? "..."
+                : products.filter((product) => product.stock > 0).length}
             </div>
             <p className="text-sm text-gray-600">In Stock</p>
           </div>
@@ -519,7 +540,9 @@ export default function AdminProducts() {
         <AdminCard>
           <div className="text-center">
             <div className="text-2xl font-bold text-orange-600">
-              {loading ? "..." : products.filter((product) => product.stock <= 10).length}
+              {loading
+                ? "..."
+                : products.filter((product) => product.stock <= 10).length}
             </div>
             <p className="text-sm text-gray-600">Low Stock</p>
           </div>
@@ -623,7 +646,10 @@ export default function AdminProducts() {
                     id="inventoryUnit"
                     value={formData.inventoryUnit}
                     onChange={(e) =>
-                      setFormData({ ...formData, inventoryUnit: e.target.value })
+                      setFormData({
+                        ...formData,
+                        inventoryUnit: e.target.value,
+                      })
                     }
                     placeholder="kg"
                     required
@@ -668,10 +694,16 @@ export default function AdminProducts() {
                   Pricing Options
                 </h3>
                 <p className="text-sm text-gray-500">
-                  Define sellable units, purchase steps, and inventory conversion.
+                  Define sellable units, purchase steps, and inventory
+                  conversion.
                 </p>
               </div>
-              <Button type="button" variant="outline" size="sm" onClick={addPricingOption}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addPricingOption}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Unit
               </Button>
@@ -679,7 +711,7 @@ export default function AdminProducts() {
 
             {formData.pricingOptions.map((option, optionIndex) => (
               <div
-                key={`${option.label}-${optionIndex}`}
+                key={optionIndex}
                 className="space-y-5 rounded-2xl border border-[#1B4332]/10 bg-[#F8F4E1]/40 p-5"
               >
                 <div className="flex items-center justify-between">
@@ -714,7 +746,11 @@ export default function AdminProducts() {
                     <Input
                       value={option.label}
                       onChange={(e) =>
-                        updatePricingOption(optionIndex, "label", e.target.value)
+                        updatePricingOption(
+                          optionIndex,
+                          "label",
+                          e.target.value,
+                        )
                       }
                       placeholder="Per Kg"
                     />
@@ -736,7 +772,11 @@ export default function AdminProducts() {
                       step="0.01"
                       value={option.price}
                       onChange={(e) =>
-                        updatePricingOption(optionIndex, "price", e.target.value)
+                        updatePricingOption(
+                          optionIndex,
+                          "price",
+                          e.target.value,
+                        )
                       }
                       placeholder="120"
                     />
@@ -783,7 +823,11 @@ export default function AdminProducts() {
                       step="0.001"
                       value={option.maxQuantity}
                       onChange={(e) =>
-                        updatePricingOption(optionIndex, "maxQuantity", e.target.value)
+                        updatePricingOption(
+                          optionIndex,
+                          "maxQuantity",
+                          e.target.value,
+                        )
                       }
                       placeholder="Optional"
                     />
@@ -805,7 +849,9 @@ export default function AdminProducts() {
                     />
                   </div>
                   <div className="rounded-2xl bg-white/80 px-4 py-3 text-sm text-[#1B4332]/70">
-                    <p className="font-medium text-[#1B4332]">Inventory usage</p>
+                    <p className="font-medium text-[#1B4332]">
+                      Inventory usage
+                    </p>
                     <p className="mt-1">
                       1 selected unit consumes {option.inventoryFactor || "0"}{" "}
                       {formData.inventoryUnit || "inventory units"}.
@@ -877,7 +923,9 @@ export default function AdminProducts() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="PERCENTAGE">Percentage</SelectItem>
+                              <SelectItem value="PERCENTAGE">
+                                Percentage
+                              </SelectItem>
                               <SelectItem value="FLAT">Flat</SelectItem>
                             </SelectContent>
                           </Select>
