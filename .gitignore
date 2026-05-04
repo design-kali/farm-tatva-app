@@ -15,3 +15,7 @@
 **/**.zip
 **/**.rar
 
+**/.env
+**/.env.prod
+**/.env.dev
+**/.env.local

@@ -885,8 +885,8 @@ export default function App() {
   };
 
   const getWhatsAppOrderText = (cart: CartItem[], address?: ApiAddress) => {
-    const text = `Hi, Place My Order 🛒
-Items:📦
+    const text = `Hi, Place My Order 
+Items:
 ${cart
   .map((item, index) => {
     const product = products.find((product) => product.id === item.productId);
@@ -894,9 +894,11 @@ ${cart
   })
   .join("\n")}
 
+Total: ₹${totalPrice.toFixed(2)}
+
 
 Delivery Address:
-Flat 606, Tower T-19`;
+${address ? `${address.addressLine}, ${address.deliveryArea?.name}, ${address.zipCode}` : "Not specified"}`;
 
     return text;
   };
@@ -1551,22 +1553,10 @@ Please share the catalog and order details. Thanks!`,
                 doorstep
               </p>
             </div>
-            <div>
-              <h5 className="mb-4">Quick Links</h5>
-              <ul className="space-y-2 text-sm text-white/80">
-                <li>About Us</li>
-                <li>Our Farmers</li>
-                <li>Delivery Areas</li>
-                <li>Contact</li>
-              </ul>
-            </div>
+
             <div>
               <h5 className="mb-4">Contact</h5>
-              <p className="text-sm text-white/80">
-                Email: hello@farmtatva.com
-                <br />
-                Phone: +91 98765 43210
-              </p>
+              <p className="text-sm text-white/80">Phone: +919091924342</p>
             </div>
           </div>
           <div className="border-t border-white/20 mt-8 pt-8 text-center text-sm text-white/60">
